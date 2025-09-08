@@ -19,10 +19,9 @@
 
 //Conexiones
 //Cliente -> Server
-//CPU -> Kernel
-//Kernel -> Memoria
-//CPU -> Memoria
-//IO -> Kernel
+//QUERY -> MASTER
+//WORKERS -> MASTER
+//WORKERS -> STORAGE
 
 
 typedef struct arg_struct {
@@ -36,14 +35,13 @@ typedef struct list_struct{
     sem_t *sem;
 }list_struct_t;
 
-typedef enum { //tipo_de_acceso
-    LECTURA_AC,
-    ESCRITURA_AC,
-}acceso_t ;
 
 enum protocolo_socket
 {
     OK,
+/*nuevas*/
+    PARAMETROS_QUERY,
+/*nuevas*/
     NOMBRE_IO,
     DORMIR_IO,
     PROCESS_CREATE_MEM,
@@ -79,22 +77,6 @@ enum protocolo_socket
     REACTIVAR_SUSPENDIDOS,
 };
 typedef enum protocolo_socket protocolo_socket;
-
-
-enum enum_algoritmo_largoPlazo
-{
-    LPL_FIFO,
-    LPL_SMALL,
-};
-typedef enum enum_algoritmo_largoPlazo enum_algoritmo_largoPlazo;
-
-enum enum_algoritmo_cortoPlazo
-{
-    CPL_FIFO,
-    CPL_SJF,
-    CPL_SJF_CD
-};
-typedef enum enum_algoritmo_cortoPlazo enum_algoritmo_cortoPlazo;
 
 typedef struct
 {
