@@ -41,6 +41,7 @@ enum protocolo_socket
     OK,
 /*nuevas*/
     PARAMETROS_QUERY,
+    ESPERAR_QUERY,
 /*nuevas*/
     NOMBRE_IO,
     DORMIR_IO,

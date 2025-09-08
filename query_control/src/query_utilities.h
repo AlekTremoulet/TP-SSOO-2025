@@ -3,8 +3,8 @@
 
 #include <query.h>
 
-void inicializarQuery();
-void levantarConfig();
+void inicializarQuery(char* archivo_query, int prioridad);
+void levantarConfig(char* archivo_config);
 void *conexion_cliente_master(void *args);
 
 #endif
