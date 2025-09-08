@@ -1,6 +1,5 @@
-#include <utils/hello.h>
+#include <query.h>
 
 int main(int argc, char* argv[]) {
-    saludar("storage");
     return 0;
 }

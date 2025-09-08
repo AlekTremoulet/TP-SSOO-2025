@@ -1,6 +1,5 @@
-#include <utils/hello.h>
+#include <storage.h>
 
 int main(int argc, char* argv[]) {
-    saludar("worker");
     return 0;
 }

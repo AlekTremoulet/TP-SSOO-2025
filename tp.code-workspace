@@ -28,5 +28,20 @@
     },
     "C_Cpp.autoAddFileAssociations": false,
     "C_Cpp.errorSquiggles": "disabled"
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+    
+    ],
+    "compounds": [
+    {
+      "name": "TODO",
+      "configurations": ["RUN_QUERY_C0NTROL", "RUN_MASTER","RUN_WORKER","RUN_STORAGE"],
+      // "preLaunchTask": "${defaultBuildTask}",
+      "stopAll": false
+    }
+  ]
   }
+  
 }

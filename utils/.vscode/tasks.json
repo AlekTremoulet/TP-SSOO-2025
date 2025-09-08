@@ -1,6 +1,16 @@
 {
   "version": "2.0.0",
   "tasks": [
+    {  
+      "label": "build-test",  
+      "command": "make clean test",  
+      "type": "shell",  
+      "group": {  
+        "kind": "build",  
+        "isDefault": true
+      },  
+      "problemMatcher": ["$gcc"]  
+    },
     {
       "label": "build",
       "command": "make clean all",
