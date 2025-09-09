@@ -7,7 +7,7 @@ extern t_log_level current_log_level;
 char * ip_master;
 char * puerto_master;
 int socket_master;
-char *nombre_master;
+char *nombre_master = "TEST";
 
 void inicializarQuery(char* archivo_query, int prioridad){
     
