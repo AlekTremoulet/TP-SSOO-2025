@@ -79,6 +79,11 @@ enum protocolo_socket
 };
 typedef enum protocolo_socket protocolo_socket;
 
+typedef struct{
+    char *archivo;
+    int prioridad;
+}parametros_query;
+
 typedef struct
 {
 	int size;

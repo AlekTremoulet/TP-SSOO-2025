@@ -6,6 +6,7 @@ t_log_level current_log_level;
 char *archivo_config;
 char *archivo_query;
 int prioridad;
+parametros_query parametros_a_enviar;
 
 int main(int argc, char* argv[]) {
 
@@ -15,10 +16,11 @@ int main(int argc, char* argv[]) {
     }
     
     archivo_config = argv[1];
-    archivo_query = argv[2];
-    prioridad = atoi(argv[3]);
+    parametros_a_enviar.archivo = argv[2];
+    parametros_a_enviar.prioridad = atoi(argv[3]);
+
     
     levantarConfig(archivo_config);
-    inicializarQuery(archivo_query,prioridad);
+    inicializarQuery();
     return 0;
 }
