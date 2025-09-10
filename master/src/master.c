@@ -48,8 +48,11 @@ void *server_mh_query(void *args){ // Server Multi-hilo
         parametros_recibidos.prioridad = *prioridad_ptr;
         parametros_recibidos.id_query = id_query_actual;
         id_query_actual ++;
+        parametros_recibidos.estado = READY_Q;
 
         log_info(logger, "Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <CANTIDAD>",parametros_recibidos.archivo,parametros_recibidos.prioridad,parametros_recibidos.id_query);
+        enviar_paquete_ok(socket_nuevo); // Hay que hacerlo con el worker
+
     }
     return (void *)EXIT_SUCCESS;
 

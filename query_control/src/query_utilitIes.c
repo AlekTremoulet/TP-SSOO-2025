@@ -51,5 +51,16 @@ void *conexion_cliente_master(void *args){
     agregar_a_paquete(paquete_send, &(parametros_a_enviar.prioridad), sizeof(int));
     enviar_paquete(paquete_send, socket_master);
     
+    //Esperando a master que le avise que terminó 
+    protocolo_socket COD_OP = recibir_paquete_ok(socket_master);
+
+    if (COD_OP == OK){
+        log_info(logger, "Query Finalizada - <%s>","OK");
+    } else {
+        log_info(logger, "Query Finalizada - <%s>","ERROR");
+    };
+    
+
     return (void *)EXIT_SUCCESS;
 }
+

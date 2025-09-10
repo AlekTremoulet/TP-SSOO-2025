@@ -41,7 +41,7 @@ enum protocolo_socket
     OK,
 /*nuevas*/
     PARAMETROS_QUERY,
-    ESPERAR_QUERY,
+    DEVOLUCION_QUERY,
 /*nuevas*/
     NOMBRE_IO,
     DORMIR_IO,
@@ -79,10 +79,17 @@ enum protocolo_socket
 };
 typedef enum protocolo_socket protocolo_socket;
 
+typedef enum {
+    READY_Q,
+    EXECT_Q,
+    EXIT_Q
+} estados_query;
+
 typedef struct{
     char *archivo;
     int prioridad;
     int id_query;
+    estados_query estado;
 }parametros_query;
 
 typedef struct

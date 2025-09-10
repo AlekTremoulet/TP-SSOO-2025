@@ -40,6 +40,12 @@
       "configurations": ["RUN_QUERY_C0NTROL", "RUN_MASTER","RUN_WORKER","RUN_STORAGE"],
       // "preLaunchTask": "${defaultBuildTask}",
       "stopAll": false
+    },
+        {
+      "name": "QUERY + MASTER",
+      "configurations": ["RUN_QUERY_C0NTROL", "RUN_MASTER"],
+      // "preLaunchTask": "${defaultBuildTask}",
+      "stopAll": false
     }
   ]
   }
