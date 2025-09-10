@@ -9,7 +9,7 @@ t_log *logger;
 t_config *config;
 t_log_level current_log_level;
 char * puerto_query;
-
+int id_query_actual = 0; 
 
 int main(int argc, char* argv[]);
 void levantarConfig();

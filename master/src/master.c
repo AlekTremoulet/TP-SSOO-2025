@@ -29,8 +29,9 @@ void *server_mh_query(void *args){ // Server Multi-hilo
 
     t_list *paquete_recv;
     int socket_nuevo;
-    char * archivo_actual;
-    int prioridad_query_actual;
+    // char * archivo_actual;
+    // int prioridad_query_actual;
+    parametros_query parametros_recibidos;
 
     while((socket_nuevo = esperar_cliente(server))){
         
@@ -42,10 +43,13 @@ void *server_mh_query(void *args){ // Server Multi-hilo
         }
         paquete_recv = recibir_paquete(socket_nuevo);
 
-        archivo_actual = list_remove(paquete_recv, 0);
+        parametros_recibidos.archivo = list_remove(paquete_recv, 0);
         int* prioridad_ptr = list_remove(paquete_recv, 0);
-        prioridad_query_actual = *prioridad_ptr;
-        log_info(logger, "Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <QUERY_ID>. Nivel multiprocesamiento <CANTIDAD>",archivo_actual,prioridad_query_actual);
+        parametros_recibidos.prioridad = *prioridad_ptr;
+        parametros_recibidos.id_query = id_query_actual;
+        id_query_actual ++;
+
+        log_info(logger, "Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <CANTIDAD>",parametros_recibidos.archivo,parametros_recibidos.prioridad,parametros_recibidos.id_query);
     }
     return (void *)EXIT_SUCCESS;
 

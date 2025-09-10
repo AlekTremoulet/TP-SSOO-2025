@@ -82,6 +82,7 @@ typedef enum protocolo_socket protocolo_socket;
 typedef struct{
     char *archivo;
     int prioridad;
+    int id_query;
 }parametros_query;
 
 typedef struct

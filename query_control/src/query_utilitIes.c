@@ -38,14 +38,14 @@ void *conexion_cliente_master(void *args){
 	do
 	{
 		socket_master = crear_conexion(ip_master, puerto_master);
-        log_info(logger, "Conexión al Master exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master);
 		sleep(1);
+        log_debug(logger,"Intentando conectar a MASTER");        
         
-
 	}while(socket_master == -1);
 
-    
+    log_info(logger, "Conexión al Master exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master);
     log_info(logger, "Solicitud de ejecución de Query: <%s>, prioridad: <%d>",parametros_a_enviar.archivo, parametros_a_enviar.prioridad);
+
     t_paquete *paquete_send = crear_paquete(PARAMETROS_QUERY);
     agregar_a_paquete(paquete_send, parametros_a_enviar.archivo, strlen(parametros_a_enviar.archivo) + 1);
     agregar_a_paquete(paquete_send, &(parametros_a_enviar.prioridad), sizeof(int));
