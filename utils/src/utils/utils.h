@@ -102,7 +102,6 @@ typedef struct{
 
 typedef struct{ 
     int id;
-    int pc;
     }parametros_worker;
 
 typedef struct

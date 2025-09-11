@@ -3,14 +3,12 @@
 
 
 int main(int argc, char* argv[]) {
-    pthread_t tid_server_mh_query;
-    pthread_t tid_server_mh_worker;
+    pthread_t tid_server_mh;
 
     levantarConfig();
-    pthread_create(&tid_server_mh_query, NULL, server_mh_query, NULL);
-    pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
-    pthread_join(tid_server_mh_query, NULL);
-    pthread_join(tid_server_mh_worker, NULL);
+    pthread_create(&tid_server_mh, NULL, server_mh, NULL);
+    pthread_join(tid_server_mh, NULL);
+
     log_destroy(logger);
     return 0;
 }
@@ -27,7 +25,7 @@ void levantarConfig(){
 }
 
 
-void *server_mh_query(void *args){ // Server Multi-hilo 
+void *server_mh(void *args){ // Server Multi-hilo 
     int server = iniciar_servidor(puerto);
     protocolo_socket cod_op;
 
@@ -35,58 +33,39 @@ void *server_mh_query(void *args){ // Server Multi-hilo
     int socket_nuevo;
     // char * archivo_actual;
     // int prioridad_query_actual;
-    parametros_query parametros_recibidos;
+    parametros_query parametros_recibidos_query;
+    parametros_worker parametros_recibidos_worker;
 
     while((socket_nuevo = esperar_cliente(server))){
         
         cod_op = recibir_operacion(socket_nuevo);
-        
-        if(cod_op != PARAMETROS_QUERY){
-            log_error(logger, "Se recibio un protocolo inesperado de la QUERY");
-            return (void*)EXIT_FAILURE;
+        switch (cod_op)
+        {
+        case PARAMETROS_QUERY:
+            paquete_recv = recibir_paquete(socket_nuevo);
+            parametros_recibidos_query.archivo = list_remove(paquete_recv, 0);
+            int* prioridad_ptr = list_remove(paquete_recv, 0);
+            parametros_recibidos_query.prioridad = *prioridad_ptr;
+            parametros_recibidos_query.id_query = id_query_actual;
+            id_query_actual ++;
+            parametros_recibidos_query.estado = READY_Q;
+
+            log_info(logger, "Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <CANTIDAD>",parametros_recibidos_query.archivo,parametros_recibidos_query.prioridad,parametros_recibidos_query.id_query);
+            enviar_paquete_ok(socket_nuevo);
+            break;
+        case PARAMETROS_WORKER:
+            paquete_recv = recibir_paquete(socket_nuevo);
+            int* id_ptr = list_remove(paquete_recv, 0);
+            parametros_recibidos_worker.id = *id_ptr;
+
+            log_info(logger, "Se conecta un Worker con Id: <%d> ",parametros_recibidos_worker.id);
+            enviar_paquete_ok(socket_nuevo);
+            break;
+        default:
+                log_error(logger, "Se recibio un protocolo inesperado");
+            break;
         }
-        paquete_recv = recibir_paquete(socket_nuevo);
-
-        parametros_recibidos.archivo = list_remove(paquete_recv, 0);
-        int* prioridad_ptr = list_remove(paquete_recv, 0);
-        parametros_recibidos.prioridad = *prioridad_ptr;
-        parametros_recibidos.id_query = id_query_actual;
-        id_query_actual ++;
-        parametros_recibidos.estado = READY_Q;
-
-        log_info(logger, "Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <CANTIDAD>",parametros_recibidos.archivo,parametros_recibidos.prioridad,parametros_recibidos.id_query);
-        enviar_paquete_ok(socket_nuevo);
-
+        return (void *)EXIT_SUCCESS;
     }
-    return (void *)EXIT_SUCCESS;
-
-}
-
-void server_mh_worker() {
-    int server = iniciar_servidor(puerto);
-    protocolo_socket cod_op;
-
-    t_list *paquete_recv;
-    int socket_nuevo;
-    parametros_worker parametros_recibidos;
-
-    while((socket_nuevo = esperar_cliente(server))){
-        
-        cod_op = recibir_operacion(socket_nuevo);
-        
-        if(cod_op != PARAMETROS_WORKER){
-            log_error(logger, "Se recibio un protocolo inesperado del WORKER");
-            return (void*)EXIT_FAILURE;
-        }
-        paquete_recv = recibir_paquete(socket_nuevo);
-
-        parametros_recibidos.id  = list_remove(paquete_recv, 0);
-        parametros_recibidos.pc  = list_remove(paquete_recv, 0);
-
-        log_info(logger, "Se conecta un Worker con Id: <%d> con el PC: <%d>",parametros_recibidos.id, parametros_recibidos.pc);
-        enviar_paquete_ok(socket_nuevo);
-
-    }
-    return (void *)EXIT_SUCCESS;
 
 }

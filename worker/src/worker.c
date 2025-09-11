@@ -1,17 +1,17 @@
 #include <worker.h>
 
-extern t_log *logger;
-extern t_config *config;
-extern t_log_level current_log_level;
-extern parametros_worker parametros_a_enviar;
 
-char *archivo_config;
+
+char* archivo_config;
 int prioridad;
 
-char * ip_master;
-char * puerto_master;
+char* ip_master;
+char* ip_storage;
+char* puerto_master;
+char* puerto_storage;
 int socket_master;
-char * nombre_master = "TEST";
+int socket_storage;
+
 
 
 
@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
     archivo_config = argv[1];
     parametros_a_enviar.id = atoi(argv[2]);
 
-    
+    levantarStorage();
     levantarConfig(archivo_config);
     inicializarWorker();
     return 0;
@@ -38,13 +38,13 @@ void inicializarWorker(){
     pthread_t tid_conexion_master;
     pthread_t tid_conexion_storage;
 
-    pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
     pthread_create(&tid_conexion_storage, NULL, conexion_cliente_storage, NULL);
-    pthread_join(tid_conexion_master, NULL);
+    pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
     pthread_join(tid_conexion_storage, NULL);
-
-
+    pthread_join(tid_conexion_master, NULL);
+    
 }
+
 void levantarConfig(char* archivo_config){
     char path[64];
     snprintf(path, sizeof(path), "./%s", archivo_config);
@@ -55,6 +55,14 @@ void levantarConfig(char* archivo_config){
     ip_master = config_get_string_value(config, "IP_MASTER");
     puerto_master = config_get_string_value(config, "PUERTO_MASTER");
 }
+void levantarStorage(){
+    config = config_create("./worker.config");
+    char *value = config_get_string_value(config, "LOG_LEVEL");
+    current_log_level = log_level_from_string(value);
+    ip_storage = config_get_string_value(config, "IP_STORAGE");
+    puerto_storage = config_get_string_value(config, "PUERTO_STORAGE");
+}
+
 
 void *conexion_cliente_master(void *args){
     
@@ -67,26 +75,48 @@ void *conexion_cliente_master(void *args){
 	}while(socket_master == -1);
 
     log_info(logger, "Conexión al Master exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master);
-    log_info(logger, "Solicitud de ejecución de Worker: <%s>, ID:  <%d>",nombre_master, parametros_a_enviar.id);
+    log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", parametros_a_enviar.id);
 
     t_paquete *paquete_send = crear_paquete(PARAMETROS_WORKER);
-    agregar_a_paquete(paquete_send, parametros_a_enviar.id, strlen(parametros_a_enviar.id) + 1);
-    agregar_a_paquete(paquete_send, parametros_a_enviar.pc, strlen(parametros_a_enviar.pc) + 1);
+    agregar_a_paquete(paquete_send, &(parametros_a_enviar.id), sizeof(int));
     enviar_paquete(paquete_send, socket_master);
     
     //Esperando a master que le avise que terminó 
     protocolo_socket COD_OP = recibir_paquete_ok(socket_master);
 
     if (COD_OP == OK){
-        log_info(logger, "Query Finalizada - <%s>","OK");
+        log_info(logger, "Worker Finalizada - <%s>","OK");
     } else {
-        log_info(logger, "Query Finalizada - <%s>","ERROR");
+        log_info(logger, "Worker Finalizada - <%s>","ERROR");
     };
     
-
     return (void *)EXIT_SUCCESS;
 }
 
-void conexion_cliente_storage (void *args){
+void *conexion_cliente_storage (void *args){
+	do
+	{
+		socket_storage = crear_conexion(ip_storage, puerto_storage);
+		sleep(1);
+        log_debug(logger,"Intentando conectar a STORAGE");        
+        
+	}while(socket_storage == -1);
+
+    log_info(logger, "Conexión al Storage exitoso. IP: <%s>, Puerto: <%s>",ip_storage, puerto_storage);
+    log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", parametros_a_enviar.id);
+
+    t_paquete *paquete_send = crear_paquete(PARAMETROS_WORKER);
+    agregar_a_paquete(paquete_send, &(parametros_a_enviar.id), sizeof(int));
+    enviar_paquete(paquete_send, socket_storage);
     
+    //Esperando a worker que le avise que terminó 
+    protocolo_socket COD_OP = recibir_paquete_ok(socket_storage);
+
+    if (COD_OP == OK){
+        log_info(logger, "Worker Finalizada - <%s>","OK");
+    } else {
+        log_info(logger, "Worker Finalizada - <%s>","ERROR");
+    };
+    
+    return (void *)EXIT_SUCCESS; 
 }

@@ -12,8 +12,8 @@ char * puerto;
 int id_query_actual = 0; 
 
 int main(int argc, char* argv[]);
-void levantarConfig_Query();
-void levantarConfig_Worker();
-void *server_mh_query(void *args);
+void levantarConfig();
+void* server_mh(void *args);
+
 
 #endif

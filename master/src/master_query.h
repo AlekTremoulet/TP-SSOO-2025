@@ -2,6 +2,6 @@
 #define MASTER_MAIN_
 
 #include <master.h>
-extern char * puerto_query;
+extern char* puerto;
 
 #endif
