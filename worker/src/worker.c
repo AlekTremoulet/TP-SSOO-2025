@@ -1,5 +1,92 @@
 #include <worker.h>
 
+extern t_log *logger;
+extern t_config *config;
+extern t_log_level current_log_level;
+extern parametros_worker parametros_a_enviar;
+
+char *archivo_config;
+int prioridad;
+
+char * ip_master;
+char * puerto_master;
+int socket_master;
+char * nombre_master = "TEST";
+
+
+
 int main(int argc, char* argv[]) {
+
+    if (argc < 3){
+        printf("Error en los argumentos de la archivo");
+        return EXIT_FAILURE;
+    }
+    
+    archivo_config = argv[1];
+    parametros_a_enviar.id = atoi(argv[2]);
+
+    
+    levantarConfig(archivo_config);
+    inicializarWorker();
     return 0;
+}
+
+void inicializarWorker(){
+    
+    logger = log_create("worker.log", "WORKER", 1, current_log_level);
+
+    pthread_t tid_conexion_master;
+    pthread_t tid_conexion_storage;
+
+    pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
+    pthread_create(&tid_conexion_storage, NULL, conexion_cliente_storage, NULL);
+    pthread_join(tid_conexion_master, NULL);
+    pthread_join(tid_conexion_storage, NULL);
+
+
+}
+void levantarConfig(char* archivo_config){
+    char path[64];
+    snprintf(path, sizeof(path), "./%s", archivo_config);
+    config = config_create(path);
+    char *value = config_get_string_value(config, "LOG_LEVEL");
+    current_log_level = log_level_from_string(value);
+
+    ip_master = config_get_string_value(config, "IP_MASTER");
+    puerto_master = config_get_string_value(config, "PUERTO_MASTER");
+}
+
+void *conexion_cliente_master(void *args){
+    
+	do
+	{
+		socket_master = crear_conexion(ip_master, puerto_master);
+		sleep(1);
+        log_debug(logger,"Intentando conectar a MASTER");        
+        
+	}while(socket_master == -1);
+
+    log_info(logger, "Conexión al Master exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master);
+    log_info(logger, "Solicitud de ejecución de Worker: <%s>, ID:  <%d>",nombre_master, parametros_a_enviar.id);
+
+    t_paquete *paquete_send = crear_paquete(PARAMETROS_WORKER);
+    agregar_a_paquete(paquete_send, parametros_a_enviar.id, strlen(parametros_a_enviar.id) + 1);
+    agregar_a_paquete(paquete_send, parametros_a_enviar.pc, strlen(parametros_a_enviar.pc) + 1);
+    enviar_paquete(paquete_send, socket_master);
+    
+    //Esperando a master que le avise que terminó 
+    protocolo_socket COD_OP = recibir_paquete_ok(socket_master);
+
+    if (COD_OP == OK){
+        log_info(logger, "Query Finalizada - <%s>","OK");
+    } else {
+        log_info(logger, "Query Finalizada - <%s>","ERROR");
+    };
+    
+
+    return (void *)EXIT_SUCCESS;
+}
+
+void conexion_cliente_storage (void *args){
+    
 }

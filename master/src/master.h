@@ -8,11 +8,12 @@
 t_log *logger;
 t_config *config;
 t_log_level current_log_level;
-char * puerto_query;
+char * puerto;
 int id_query_actual = 0; 
 
 int main(int argc, char* argv[]);
-void levantarConfig();
+void levantarConfig_Query();
+void levantarConfig_Worker();
 void *server_mh_query(void *args);
 
 #endif

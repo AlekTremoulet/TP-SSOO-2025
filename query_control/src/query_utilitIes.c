@@ -30,7 +30,6 @@ void levantarConfig(char* archivo_config){
 
     ip_master = config_get_string_value(config, "IP_MASTER");
     puerto_master = config_get_string_value(config, "PUERTO_MASTER");
-
 }
 
 void *conexion_cliente_master(void *args){

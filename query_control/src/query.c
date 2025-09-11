@@ -10,7 +10,7 @@ parametros_query parametros_a_enviar;
 
 int main(int argc, char* argv[]) {
 
-    if (!argv[1] || !argv[2] || !argv[3]){
+    if (argc < 4){
         printf("Error en los argumentos de la archivo");
         return EXIT_FAILURE;
     }
