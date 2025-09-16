@@ -4,7 +4,6 @@ t_log *logger;
 t_config *config;
 t_log_level current_log_level;
 char *archivo_config;
-char *archivo_query;
 int prioridad;
 parametros_query parametros_a_enviar;
 

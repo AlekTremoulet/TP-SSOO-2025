@@ -65,7 +65,7 @@ void *server_mh(void *args){ // Server Multi-hilo
                 log_error(logger, "Se recibio un protocolo inesperado");
             break;
         }
-        return (void *)EXIT_SUCCESS;
     }
+    return (void *)EXIT_SUCCESS;
 
 }
