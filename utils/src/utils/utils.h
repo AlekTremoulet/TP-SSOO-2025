@@ -104,6 +104,17 @@ typedef struct{
     int id;
     }parametros_worker;
 
+typedef enum{
+    CREATE,
+    TRUNCATE,
+    WRITE,
+    READ,
+    TAG,
+    COMMIT,
+    FLUSH,
+    DELETE,
+    END
+} t_instruccion;
 typedef struct
 {
 	int size;
