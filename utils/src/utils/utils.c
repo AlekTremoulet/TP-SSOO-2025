@@ -186,7 +186,7 @@
         t_paquete* paquete = malloc(sizeof(t_paquete));
         paquete->codigo_operacion = OK;
         crear_buffer(paquete);
-        agregar_a_paquete(paquete, "OK", sizeof("OK"+1));
+        agregar_a_paquete(paquete, "OK", strlen("OK")+1);
         return paquete;
     }
 

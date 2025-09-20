@@ -1,5 +1,5 @@
-#ifndef MASTER_MAIN_
-#define MASTER_MAIN_
+#ifndef STORAGE_MAIN_
+#define STORAGE_MAIN_
 
 #include <utils/utils.h>
 #include <commons/log.h>
