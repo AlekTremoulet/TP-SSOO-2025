@@ -14,12 +14,14 @@
 
 t_log *logger;
 t_config *config;
+t_config *configSuperblock;
 t_log_level current_log_level;
 char * puerto;
 char * fresh_start;
 char * punto_montaje;
-int * tam_fs;
-int * tam_bloque;
+int tam_fs;
+int tam_bloque;
+int block_count;
 
 
 int main(int argc, char* argv[]);

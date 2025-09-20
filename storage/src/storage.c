@@ -11,6 +11,7 @@ int main(int argc, char* argv[]) {
         crear_directorio(punto_montaje);
     }
     levantarConfigSuperblock();
+    inicializar_bitmap();
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -32,8 +33,10 @@ void levantarConfig(){
 
 
 void levantarConfigSuperblock(){
-    tam_fs = config_get_int_value(config, "FS_SIZE");
-    tam_bloque = config_get_int_value(config, "BLOCK_SIZE");
+    configSuperblock = config_create("./superblock.config");
+    tam_fs = config_get_int_value(configSuperblock, "FS_SIZE");
+    tam_bloque = config_get_int_value(configSuperblock, "BLOCK_SIZE");
+    block_count = tam_fs / tam_bloque;
     
 }
 
