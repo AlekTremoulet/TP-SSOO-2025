@@ -1,30 +1,47 @@
 #include <master.h>
 
+t_log *logger = NULL;
+t_config *config = NULL;
+t_log_level current_log_level;
+char *puerto = NULL;
+
+static void *handler_cliente(void *arg);
+static void *planificador_fifo(void *_);
+
 int id_query_actual;
 
 // estructuras FIFO
 typedef struct {
     int id_query;
     int prioridad;
-    char *archivo;   // copia del path que manda el Query
+    char *archivo;   // copia del path que manda el Query (uso strdup)
     int socket_qc;   // socket del Query para avisarle el final
 } query_t;
 
 typedef struct {
     int id;
-    int socket_worker;   // socket del Worker para mandarle la asignación
+    int socket_worker;   // socket del Worker para mandarle la tarea al Worker: path + id_query
 } worker_t;
 
 // colas thread-safe
 list_struct_t *cola_ready_queries;   // elementos: query_t*
 list_struct_t *workers_libres;       // elementos: worker_t*
 
+pthread_mutex_t m_id;
+
 int main(int argc, char* argv[]) {
     id_query_actual = 1;
     
     pthread_t tid_server_mh;
+    pthread_t tid_planificador;
 
     levantarConfig();
+
+    // FIFO
+    pthread_create(&tid_planificador, NULL, planificador_fifo, NULL);
+    pthread_detach(tid_planificador); // pthread_detach =  el hilo se auto-limpia cuando termina
+    // (como el planificador corre para siempre y nunca se lo va a esperar con join, se detacha y listo)
+
     pthread_create(&tid_server_mh, NULL, server_mh, NULL);
     pthread_join(tid_server_mh, NULL);
 
@@ -41,10 +58,28 @@ void levantarConfig(){
     puerto= config_get_string_value(config, "PUERTO_ESCUCHA");
     logger = log_create("master.log", "MASTER", 1, current_log_level);
 
-    // inicializo colas FIFO (listas con mutex + semaforo)
+    // inicializo colas FIFO
     cola_ready_queries = inicializarLista();
     workers_libres     = inicializarLista();
 
+    pthread_mutex_init(&m_id, NULL);
+
+}
+
+void *server_mh(void *args) { // Server Multi-hilo
+    int server = iniciar_servidor(puerto);
+    int socket_nuevo;
+
+    // solo acepta y delega (un hilo por conexion)
+    while ((socket_nuevo = esperar_cliente(server))) {
+        int *arg = malloc(sizeof(int));
+        *arg = socket_nuevo;
+
+        pthread_t th;
+        pthread_create(&th, NULL, handler_cliente, arg);
+        pthread_detach(th);
+    }
+    return (void*)EXIT_SUCCESS;
 }
 
 // atiendo UNA conexion entrante (puede ser Query o Worker) y dejo el socket abierto
@@ -71,14 +106,18 @@ static void *handler_cliente(void *arg) {
             int *prioridad_ptr = list_remove(paquete_recv, 0);
             int prioridad = *prioridad_ptr;
 
-            int id_asignado = id_query_actual++;
+            int id_asignado;    // valor inicial
+            pthread_mutex_lock(&m_id);
+            id_asignado = id_query_actual++;
+            pthread_mutex_unlock(&m_id);
+
             log_info(logger,
                 "Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <CANTIDAD>",
                 archivo_recv, prioridad, id_asignado);
 
             enviar_paquete_ok(socket_nuevo);
 
-            // FIFO
+            // FIFO - armo la query para la cola READY
             query_t *q = malloc(sizeof(query_t));
             q->archivo   = strdup(archivo_recv);   // me quedo una copia propia
             q->prioridad = prioridad;
@@ -106,7 +145,7 @@ static void *handler_cliente(void *arg) {
 
             enviar_paquete_ok(socket_nuevo);
 
-            // FIFO
+            // FIFO - registro al worker como libre
             worker_t *w = malloc(sizeof(worker_t));
             w->id            = worker_id;
             w->socket_worker = socket_nuevo;       // guardo la conexion al worker
@@ -118,6 +157,14 @@ static void *handler_cliente(void *arg) {
             // FIFO
 
             list_destroy_and_destroy_elements(paquete_recv, free);
+            break;
+        }
+
+        // resultado
+        case DEVOLUCION_WORKER: {
+            // TODO: leer (id_query, status) del paquete
+            // TODO: re-encolar este worker en workers_libres
+            // TODO: buscar socket_qc por id_query y enviar DEVOLUCION_QUERY
             break;
         }
 
@@ -135,18 +182,54 @@ static void *handler_cliente(void *arg) {
     return NULL;
 }
 
-void *server_mh(void *args) { // Server Multi-hilo
-    int server = iniciar_servidor(puerto);
-    int socket_nuevo;
 
-    // solo acepta y delega (un hilo por conexion)
-    while ((socket_nuevo = esperar_cliente(server))) {
-        int *arg = malloc(sizeof(int));
-        *arg = socket_nuevo;
+// ENUNCIADO FIFO:
+// Las ejecuciones de las Queries se irán asignando a cada Worker por orden de llegada.
+// Una vez que todos los Workers tengan una Query asignada se encolará el resto de las Queries en el estado READY.
 
-        pthread_t th;
-        pthread_create(&th, NULL, handler_cliente, arg);
-        pthread_detach(th);
+
+// planificador FIFO: toma la primera query READY y el primer worker libre
+// y le envia al worker (path, id_query)
+static void *planificador_fifo(void *_) {
+    while (1) {
+        // espero hasta tener al menos 1 worker libre y 1 query en READY
+        sem_wait(workers_libres->sem);
+        sem_wait(cola_ready_queries->sem);
+
+        // saco el primero de cada cola
+        pthread_mutex_lock(workers_libres->mutex);
+        worker_t *w = list_remove(workers_libres->lista, 0);
+        pthread_mutex_unlock(workers_libres->mutex);
+
+        pthread_mutex_lock(cola_ready_queries->mutex);
+        query_t *q = list_remove(cola_ready_queries->lista, 0);
+        pthread_mutex_unlock(cola_ready_queries->mutex);
+
+        if (w == NULL || q == NULL) {
+            // si no hay elementos, sigo
+            continue;
+        }
+
+        // envio la asignacion al Worker: path + id_query
+        t_paquete *p = crear_paquete(PARAMETROS_QUERY);
+        agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1);
+        agregar_a_paquete(p, &(q->id_query), sizeof(int));
+        enviar_paquete(p, w->socket_worker);
+        eliminar_paquete(p);
+
+        log_info(logger, "FIFO: Asignada Query id <%d> al Worker id <%d>",
+                 q->id_query, w->id);
+
+        free(w);
+        free(q->archivo);
+        free(q);
+
+        // TODO: el worker queda ocupado hasta implementar la devolucion
     }
-    return (void*)EXIT_SUCCESS;
+    return NULL;
 }
+
+// TODO: manejar DEVOLUCION_WORKER (id_query, status)
+//   - re-encolar al worker en workers_libres
+//   - avisarle al Query por socket_qc con DEVOLUCION_QUERY(status)
+//   - IMPORTANTE: hay que guardar una tabla id_query -> socket_qc para saber xq socket responder a cada query cuando el Worker termine
