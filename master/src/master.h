@@ -9,10 +9,11 @@ t_log *logger;
 t_config *config;
 t_log_level current_log_level;
 char * puerto;
-int id_query_actual = 0; 
+extern int id_query_actual;
 
 int main(int argc, char* argv[]);
 void levantarConfig();
+static void *handler_cliente(void *arg);
 void* server_mh(void *args);
 
 
