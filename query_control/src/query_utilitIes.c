@@ -54,6 +54,7 @@ void *conexion_cliente_master(void *args){
     protocolo_socket COD_OP = recibir_paquete_ok(socket_master);
 
     if (COD_OP == OK){
+        log_info(logger, "Lectura realizada: Archivo <File:Tag>, contenido: <CONTENIDO>");
         log_info(logger, "Query Finalizada - <%s>","OK");
     } else {
         log_info(logger, "Query Finalizada - <%s>","ERROR");

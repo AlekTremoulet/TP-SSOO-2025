@@ -51,3 +51,44 @@ static qi_status_t exec_CREATE(int qid, char* cadena) {
 
 
 }
+
+void intepretar_Instruccion(t_instruccion instruccion) {
+    
+    switch (instruccion){
+        case CREATE:
+            
+        break;
+        
+        case TRUNCATE:
+            
+        break;
+        
+        case WRITE:
+            
+        break;
+
+        case READ:
+            
+        break;
+
+        case TAG:
+            
+        break;
+        
+        case COMMIT:
+            
+        break;
+        case FLUSH:
+            
+        break;
+        case DELETE:
+            
+        break;
+        case END:
+            
+        break;
+        default:
+            log_error(logger, "No se puedo intepretar la instruccion");
+        break;
+    }
+}

@@ -16,4 +16,8 @@ typedef enum {
     QI_ERR_NO_HAY_ESPACIO
 } qi_status_t;
 
+void intepretar_Instruccion(t_instruccion instruccion);
+static qi_status_t exec_CREATE(int qid, char* cadena);
+static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out);
+
 #endif
