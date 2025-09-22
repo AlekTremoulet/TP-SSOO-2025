@@ -37,6 +37,6 @@ bool espacio_disponible(uint32_t cantidad);
 void liberar_bloque(uint32_t bloque);
 int cargar_bitmap();
 void destruir_bitmap();
-char *cargar_en_fs(char *ruta_al_archivo);
+char *cargar_ruta(char *ruta_al_archivo);
 
 #endif

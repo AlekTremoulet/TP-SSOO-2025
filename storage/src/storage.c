@@ -37,6 +37,15 @@ void levantarConfigSuperblock(){
     tam_fs = config_get_int_value(configSuperblock, "FS_SIZE");
     tam_bloque = config_get_int_value(configSuperblock, "BLOCK_SIZE");
     block_count = tam_fs / tam_bloque;
+    char *superblock = cargar_archivo("superblock.config");
+    FILE *fp = fopen(superblock, "w");
+    if (!fp) {
+        perror("Error al abrir superblock.config");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(fp, "FS_SIZE=%d\n", tam_fs);
+    fprintf(fp, "BLOCK_SIZE=%d\n", tam_bloque);
+    fclose(fp);
     
 }
 
@@ -138,3 +147,18 @@ char* borrar_directorio(const char* path_a_borrar) {
     return strdup(path_a_borrar);
 }
 
+
+char *cargar_archivo(char *ruta_al_archivo){ 
+    size_t path_length = strlen(punto_montaje) + strlen(ruta_al_archivo) + 2;
+    char *path_creado = malloc(path_length);
+    if (!path_creado) {
+        log_info(logger, "Error: No se pudo asignar memoria para crear el archivo");
+        exit(EXIT_FAILURE);
+    }
+    
+    snprintf(path_creado, path_length, "%s/%s", punto_montaje,ruta_al_archivo);
+    log_info(logger, "Ruta del archivo: %s", path_creado);
+    log_info(logger, "archivo %s inicializado correctamente.",path_creado);
+
+    return path_creado;
+}

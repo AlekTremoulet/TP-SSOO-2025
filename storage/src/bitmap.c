@@ -14,7 +14,7 @@ void inicializar_libres() {
 void inicializar_bitmap() {
     size_t tamanio_bitmap = (size_t)ceil((double)block_count/8);;
     
-    char *path_bitmap = cargar_en_fs("bitmap.bin");
+    char *path_bitmap = cargar_ruta("bitmap.bin");
 
 
     bitmap_file = fopen(path_bitmap, "rb+");
@@ -116,7 +116,7 @@ void destruir_bitmap() {
 
 }
 
-char *cargar_en_fs(char *ruta_al_archivo){ 
+char *cargar_ruta(char *ruta_al_archivo){ 
     size_t path_length = strlen(punto_montaje) + strlen(ruta_al_archivo) + 2;
     char *path_creado = malloc(path_length);
     if (!path_creado) {

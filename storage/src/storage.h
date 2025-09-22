@@ -29,6 +29,6 @@ void levantarConfigSuperblock();
 void* server_mh_worker(void *args);
 char* crear_directorio(char* path_a_crear);
 char* borrar_directorio(const char* path_a_borrar);
-
+char *cargar_archivo(char *ruta_al_archivo);
 
 #endif
