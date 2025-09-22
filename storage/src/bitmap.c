@@ -1,18 +1,5 @@
 #include "bitmap.h"
 
-extern char * punto_montaje;
-extern int tam_fs;
-extern int tam_bloque;
-extern int block_count;
-
-static t_bitarray* bitmap;
-static FILE* bitmap_file;
-extern t_log *logger;
-
-int libres;
-
-uint32_t bits_ocupados;
-
 void inicializar_libres() {
     libres = 0;
     int i = 0;
@@ -25,21 +12,9 @@ void inicializar_libres() {
 }
  
 void inicializar_bitmap() {
-    if (block_count == 0) {
-        log_info(logger, "No se encontró el valor BLOCK_COUNT en el archivo de configuración.");
-        exit(EXIT_FAILURE);
-    }
-
-    size_t tamanio_bitmap = (size_t)ceil((double)block_count/8);
-
-    size_t path_length = strlen(punto_montaje) + strlen("/bitmap.bin") + 1;
-    char *path_bitmap = malloc(path_length);
-    if (!path_bitmap) {
-        log_info(logger, "Error: No se pudo asignar memoria para path_bitmap");
-        exit(EXIT_FAILURE);
-    }
-    snprintf(path_bitmap, path_length, "%s/bitmap.bin", punto_montaje);
-    log_info(logger, "Ruta del bitmap: %s", path_bitmap);
+    size_t tamanio_bitmap = (size_t)ceil((double)block_count/8);;
+    
+    char *path_bitmap = cargar_en_fs("bitmap.bin");
 
 
     bitmap_file = fopen(path_bitmap, "rb+");
@@ -105,11 +80,7 @@ bool espacio_disponible(uint32_t cantidad) {
 }
 
 int cargar_bitmap() {
-    size_t path_length = strlen(punto_montaje) + strlen("/bitmap.bin") + 1;
-    char* path_bitmap = malloc(path_length);
-    strcpy(path_bitmap,"");
-    strcat(path_bitmap, punto_montaje);
-    strcat(path_bitmap, "/bitmap.bin");
+
     FILE* bitmap_file = fopen(path_bitmap, "rb+");
     if (bitmap_file == NULL) {
         log_info(logger, "Error al abrir el archivo bitmap.bin para escritura.");
@@ -143,4 +114,19 @@ void destruir_bitmap() {
     bitarray_destroy(bitmap);
     fclose(bitmap_file);
 
+}
+
+char *cargar_en_fs(char *ruta_al_archivo){ 
+    size_t path_length = strlen(punto_montaje) + strlen(ruta_al_archivo) + 2;
+    char *path_creado = malloc(path_length);
+    if (!path_creado) {
+        log_info(logger, "Error: No se pudo asignar memoria para crear el archivo");
+        exit(EXIT_FAILURE);
+    }
+    
+    snprintf(path_creado, path_length, "%s/%s", punto_montaje,ruta_al_archivo);
+    log_info(logger, "Ruta del archivo: %s", path_creado);
+    log_info(logger, "archivo %s inicializado correctamente.",path_creado);
+
+    return path_creado;
 }

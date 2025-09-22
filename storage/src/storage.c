@@ -138,34 +138,3 @@ char* borrar_directorio(const char* path_a_borrar) {
     return strdup(path_a_borrar);
 }
 
-int cargar_en_fs(char nombre_archivo, char* ruta_base){ 
-
-    if (ruta_base == NULL) {
-        log_error(logger, "No se pudo obtener la ruta base para el dump");
-        return -1;
-    }
-
-    size_t ruta_completa_len = strlen(ruta_base) + strlen(nombre_archivo) + 2;
-    char* ruta_completa = malloc(ruta_completa_len);
-    if (!ruta_completa) {
-        log_error(logger, "No se pudo asignar memoria para la ruta completa");
-        free(ruta_base);
-        return -1;
-    }
-
-    snprintf(ruta_completa, ruta_completa_len, "%s/%s", ruta_base, nombre_archivo);
-
-    FILE* f = fopen(ruta_completa, "w");
-    if (!f) {
-        log_error(logger, "No se pudo abrir archivo");
-        free(ruta_base);
-        free(ruta_completa);
-        return -1;
-    }
-    
-    fclose(f);
-    free(ruta_base);
-    free(ruta_completa);
-
-    return 0;
-}

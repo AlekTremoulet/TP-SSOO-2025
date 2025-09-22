@@ -23,7 +23,6 @@ int tam_fs;
 int tam_bloque;
 int block_count;
 
-
 int main(int argc, char* argv[]);
 void levantarConfig();
 void levantarConfigSuperblock();
