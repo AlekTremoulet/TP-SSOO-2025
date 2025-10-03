@@ -1,3 +1,10 @@
+# 📂Cosas por hacer
+Hecho:✅  Por hacer:📦 
++ [📦] Lectura de archivos de Queries (Worker).
++ [📦] Interpretar  todas las instrucciones (Worker).
++ [📦] Ejecutar todas las instrucciones (Worker).
++ [📦] Creación de tablas de páginas (Worker).
+
 # tp-scaffold
 
 Esta es una plantilla de proyecto diseñada para generar un TP de Sistemas
