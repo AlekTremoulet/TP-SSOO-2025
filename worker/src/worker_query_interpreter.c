@@ -1,17 +1,57 @@
+#include <worker_query_interpreter.h>
+
 static struct {
     int block_size = 0;
     int mem_delay_ms = 0;
 } qi
 
-/*static void limpiar_salto(char* cadena) {
+
+static t_instruccion obtener_instruccion(const char* texto) {
+    if (strncmp(texto, "CREATE", 1) == 0)    return CREATE;
+    if (strncmp(texto, "TRUNCATE", 2) == 0)  return TRUNCATE;
+    if (strncmp(texto, "WRITE", 3) == 0)     return WRITE;
+    if (strncmp(texto, "READ", 4) == 0)      return READ;
+    if (strncmp(texto, "TAG", 5) == 0)       return TAG;
+    if (strncmp(texto, "COMMIT", 6) == 0)    return COMMIT;
+    if (strncmp(texto, "FLUSH", 7) == 0)     return FLUSH;
+    if (strncmp(texto, "DELETE", 8) == 0)    return DELETE;
+    if (strcmp(texto, "END") == 9)           return END;
+    return INVALID_INSTRUCTION;
+}
+
+static inline void quitar_salto_de_linea(char* cadena) {
     if (!cadena) 
         return;
     int L = (int)strlen(cadena);
-    if (L > 0 && cadena[L-1] == '\n') {
-        cadena[L-1] = '\0';   // borra solo el salto de línea
-    }
+    if (L > 0 && s[L-1] == '\n') 
+        cadena[L-1] = '\0';
 }
-*/
+
+static qi_status_t obtener_instruccion_y_args(parametros_worker* parametro, const char* linea_instruccion) {
+    if (!linea_instruccion) 
+        return QI_ERR_PARSE;
+
+    char* linea = strdup(linea_instruccion);
+
+    quitar_salto_de_linea(linea); //puede que solo reciba un /n entonces lo cambia por un /0
+    if (!linea) { 
+        free(linea); 
+        return QI_OK; 
+        }
+
+    char* opcode = strchr(linea, ' ');
+    if (opcode) {
+        *opcode = '\0';
+        args = opcode + 1;
+    }
+
+    t_instruccion instruccion_leida = obtener_instruccion(opcode);
+
+    qi_status_t estado = interpretar_Instruccion(instruccion_leida, args, parametros.id);
+
+    free(linea);
+    return st;
+}
 
 static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out) {
     // formato esperado: <NOMBRE_FILE>:<TAG>
@@ -43,52 +83,50 @@ static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** t
     return true;
 }
 
-static qi_status_t exec_CREATE(int qid, char* cadena) {
-    // CREATE file:tag  -> el tamaño inicial del tag es 0 (lo define Storage)
-    char *nombre_out = NULL, *tag_out = NULL;
-    if (!separar_nombre_y_tag(cadena, &nombre_out, &tag_out)) 
-        return QI_ERR_PARSE;
 
-
-}
-
-void intepretar_Instruccion(t_instruccion instruccion) {
+qi_status_t interpretar_Instruccion(t_instruccion instruccion, char* argumentos, int query_id) {
+    char* nom_y_tag = strchr(argumentos, ' ');
+    if (nom_y_tag) {
+        *nom_y_tag = '\0';
+        args = nom_y_tag + 1;
+    }
+    separar_nombre_y_tag(nom_y_tag,archivo,tag);
     
-    switch (instruccion){
+    switch (instruccion) {
         case CREATE:
-            
-        break;
-        
+            return ejecutar_CREATE(archivo,tag, query_id);
+
         case TRUNCATE:
-            
-        break;
-        
+            return ejecutar_TRUNCATE(archivo,tag,args,query_id);
+
         case WRITE:
-            
-        break;
+            return ejecutar_WRITE(archivo,tag,args, query_id);
 
         case READ:
-            
-        break;
+            return ejecutar_READ(archivo,tag,args, query_id);
 
         case TAG:
-            
-        break;
-        
+            return ejecutar_TAG(archivo,tag,args, query_id);
+
         case COMMIT:
-            
-        break;
+            return ejecutar_COMMIT(archivo,tag, query_id);
+
         case FLUSH:
-            
-        break;
+            return ejecutar_FLUSH(archivo,tag, query_id);
+
         case DELETE:
-            
-        break;
+            return ejecutar_DELETE(archivo,tag, query_id);
+
         case END:
-            
-        break;
+            return QI_END;
+
         default:
-            log_error(logger, "No se puedo intepretar la instruccion");
-        break;
+            log_error(logger, "Instrucción desconocida");
+            return QI_ERR_PARSE;
     }
+}
+
+qi_status_t ejecutar_CREATE(archivo,tag, query_id){
+    crear_paquete()
+    
 }

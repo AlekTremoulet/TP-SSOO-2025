@@ -4,6 +4,7 @@
 #include <utils/utils.h>
 #include <commons/log.h>
 #include <commons/config.h>
+#include <worker.h>
 
 typedef enum {
     QI_OK = 0, 
@@ -15,6 +16,20 @@ typedef enum {
     QI_ERR_NO_ENCONTRADA, 
     QI_ERR_NO_HAY_ESPACIO
 } qi_status_t;
+
+typedef enum {
+    CREATE,
+    TRUNCATE,
+    WRITE,
+    READ,
+    TAG,
+    COMMIT,
+    FLUSH,
+    DELETE,
+    END,
+    INVALID_INSTRUCTION
+} t_instruccion;
+
 
 void intepretar_Instruccion(t_instruccion instruccion);
 static qi_status_t exec_CREATE(int qid, char* cadena);
