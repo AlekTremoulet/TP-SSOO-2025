@@ -7,15 +7,22 @@ int main(int argc, char* argv[]) {
     if (strcmp(fresh_start, "TRUE") == 0){
         borrar_directorio(punto_montaje);
         crear_directorio(punto_montaje);
+        crear_directorio(dir_files);
+        crear_directorio(dir_physical_blocks);
     }else{
         crear_directorio(punto_montaje);
+        crear_directorio(dir_files);
+        crear_directorio(dir_physical_blocks);
     }
     levantarConfigSuperblock();
     inicializar_bitmap();
+    inicializar_hash();
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
     log_destroy(logger);
+    free(dir_files);
+    free(dir_physical_blocks);
     return 0;
 }
 
@@ -29,6 +36,11 @@ void levantarConfig(){
     fresh_start = config_get_string_value(config, "FRESH_START");
     punto_montaje = config_get_string_value(config, "PUNTO_MONTAJE");
 
+    dir_files = malloc(strlen(punto_montaje) + strlen("/files") + 1);
+    sprintf(dir_files, "%s/files", punto_montaje);
+
+    dir_physical_blocks = malloc(strlen(punto_montaje) + strlen("/physical_blocks") + 1);
+    sprintf(dir_physical_blocks, "%s/physical_blocks", punto_montaje);
 }
 
 
@@ -40,7 +52,7 @@ void levantarConfigSuperblock(){
     char *superblock = cargar_archivo("superblock.config");
     FILE *fp = fopen(superblock, "w");
     if (!fp) {
-        perror("Error al abrir superblock.config");
+        log_error(logger,"Error al abrir superblock.config");
         exit(EXIT_FAILURE);
     }
     fprintf(fp, "FS_SIZE=%d\n", tam_fs);
@@ -161,4 +173,18 @@ char *cargar_archivo(char *ruta_al_archivo){
     log_info(logger, "archivo %s inicializado correctamente.",path_creado);
 
     return path_creado;
+}
+
+void inicializar_hash() {
+
+    char *path_hash = cargar_archivo("blocks_hash_index.config");
+    FILE *hash_file = fopen(path_hash, "wb+");
+    if (!hash_file) {
+        log_error(logger,"Error al abrir blocks_hash_index.config");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(hash_file, "puton");
+    fclose(hash_file);
+
+
 }
