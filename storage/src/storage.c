@@ -183,7 +183,7 @@ void inicializar_hash() {
         log_error(logger,"Error al abrir blocks_hash_index.config");
         exit(EXIT_FAILURE);
     }
-    fprintf(hash_file, "puton");
+    fprintf(hash_file, "hola");
     fclose(hash_file);
 
 
