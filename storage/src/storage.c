@@ -168,7 +168,11 @@ char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo){
         exit(EXIT_FAILURE);
     }
     
-    snprintf(path_creado, path_length, "%s/%s", ruta_base,ruta_al_archivo);
+    if (!strcmp(ruta_base, "/")!= 0) {
+        snprintf(path_creado, path_length, "%s/%s", ruta_base,ruta_al_archivo);
+    } else {
+        snprintf(path_creado, path_length, "%s%s", ruta_base,ruta_al_archivo);
+    }
     log_info(logger, "Ruta del archivo: %s", path_creado);
     log_info(logger, "archivo %s inicializado correctamente.",path_creado);
 
