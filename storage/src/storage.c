@@ -49,7 +49,7 @@ void levantarConfigSuperblock(){
     tam_fs = config_get_int_value(configSuperblock, "FS_SIZE");
     tam_bloque = config_get_int_value(configSuperblock, "BLOCK_SIZE");
     block_count = tam_fs / tam_bloque;
-    char *superblock = cargar_archivo("superblock.config");
+    char *superblock = cargar_archivo(punto_montaje,"superblock.config");
     FILE *fp = fopen(superblock, "w");
     if (!fp) {
         log_error(logger,"Error al abrir superblock.config");
@@ -160,15 +160,15 @@ char* borrar_directorio(const char* path_a_borrar) {
 }
 
 
-char *cargar_archivo(char *ruta_al_archivo){ 
-    size_t path_length = strlen(punto_montaje) + strlen(ruta_al_archivo) + 2;
+char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo){ 
+    size_t path_length = strlen(ruta_base) + strlen(ruta_al_archivo) + 2;
     char *path_creado = malloc(path_length);
     if (!path_creado) {
         log_info(logger, "Error: No se pudo asignar memoria para crear el archivo");
         exit(EXIT_FAILURE);
     }
     
-    snprintf(path_creado, path_length, "%s/%s", punto_montaje,ruta_al_archivo);
+    snprintf(path_creado, path_length, "%s/%s", ruta_base,ruta_al_archivo);
     log_info(logger, "Ruta del archivo: %s", path_creado);
     log_info(logger, "archivo %s inicializado correctamente.",path_creado);
 
@@ -176,15 +176,65 @@ char *cargar_archivo(char *ruta_al_archivo){
 }
 
 void inicializar_hash() {
-
-    char *path_hash = cargar_archivo("blocks_hash_index.config");
+    path_hash = cargar_archivo(punto_montaje,"blocks_hash_index.config");
     FILE *hash_file = fopen(path_hash, "wb+");
     if (!hash_file) {
         log_error(logger,"Error al abrir blocks_hash_index.config");
         exit(EXIT_FAILURE);
     }
-    fprintf(hash_file, "hola");
     fclose(hash_file);
+    // esto esta puesto hasta que haga la parte de crear bloques
+    crear_archivo_en_FS("initial_file","BASE");
+}
 
+char *escribir_en_hash(char *nombre_bloque) {
+    FILE * hash_file = fopen(path_hash, "wb+");
+    if (!hash_file) {
+        log_error(logger,"Error al abrir blocks_hash_index.config");
+        exit(EXIT_FAILURE);
+    }
+    size_t longitud_bloque = strlen(nombre_bloque);
+    char *nombre_bloque_hash = crypto_md5(nombre_bloque, longitud_bloque);
+    fprintf(hash_file, "%s=%s",nombre_bloque_hash,nombre_bloque);
+    fclose(hash_file);
+    return nombre_bloque_hash;
+}
+
+void crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
+    t_archivo_creado archivo;
+            archivo.nombre = nombre_archivo;
+            archivo.hash = escribir_en_hash(nombre_archivo);
+
+            archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
+            sprintf(archivo.ruta_base, "%s/%s", dir_files,nombre_archivo);
+
+            archivo.ruta_tag= malloc(strlen(archivo.ruta_base) + strlen("/") + strlen(tag_archivo)+ 1); //NO SE DONDE IRIA UN FREE
+            sprintf(archivo.ruta_tag, "%s/%s", archivo.ruta_base,tag_archivo);
+
+            char* directorio_base = crear_directorio(archivo.ruta_base);
+            char* directorio_tag = crear_directorio(archivo.ruta_tag);
+    log_info(logger,"el Hash de %s es %s, y fue escrito en blocks_hash_index.config",archivo.nombre,archivo.hash);
+    log_info(logger,"La ruta base de %s es %s",archivo.nombre,archivo.ruta_base);
+    log_info(logger,"La ruta al tag es%s ",archivo.ruta_tag);
+
+    char *config_asociada = malloc(strlen(directorio_tag) + strlen("/metadata.config") + 1); //NO SE DONDE IRIA UN FREE
+    sprintf(config_asociada, "%s/%s", directorio_tag,"metadata.config");
+
+
+
+
+
+    char *directorio_config_asociada = cargar_archivo("",config_asociada);
+    log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
+// ESTO LO VOY A HACER A PARTE PERO ME DA FIACA HACERLO AHORA
+    char * estado = "WORK IN PROGRESS";
+    FILE * config_estado = fopen(directorio_config_asociada, "wb+");
+    if (!config_estado) {
+        log_error(logger,"Error al abrir el .config");
+        exit(EXIT_FAILURE);
+    }
+    fprintf(config_estado, "ESTADO=%s",estado);
+    fclose(config_estado);
+//
 
 }

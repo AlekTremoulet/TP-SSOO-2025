@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <commons/crypto.h>
 
 t_log *logger;
 t_config *config;
@@ -21,10 +22,18 @@ char * fresh_start;
 char * punto_montaje;
 char * dir_physical_blocks;
 char * dir_files;
-
+char * path_hash;
 int tam_fs;
 int tam_bloque;
 int block_count;
+
+typedef struct {
+    char * nombre;
+    char * hash;
+    char * ruta_base;
+    char * ruta_tag;
+} t_archivo_creado;
+
 
 int main(int argc, char* argv[]);
 void levantarConfig();
@@ -32,7 +41,8 @@ void levantarConfigSuperblock();
 void* server_mh_worker(void *args);
 char* crear_directorio(char* path_a_crear);
 char* borrar_directorio(const char* path_a_borrar);
-char *cargar_archivo(char *ruta_al_archivo);
+char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo);
 void inicializar_hash();
+char *escribir_en_hash(char *nombre_bloque);
 
 #endif
