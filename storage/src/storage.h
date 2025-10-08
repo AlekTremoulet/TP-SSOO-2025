@@ -34,6 +34,11 @@ typedef struct {
     char * ruta_tag;
 } t_archivo_creado;
 
+typedef struct {
+    char * nombre;
+    bool ocupado;
+} t_bloque_fisico;
+
 
 int main(int argc, char* argv[]);
 void levantarConfig();

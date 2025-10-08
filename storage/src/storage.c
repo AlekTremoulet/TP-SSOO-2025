@@ -7,20 +7,21 @@ int main(int argc, char* argv[]) {
     if (strcmp(fresh_start, "TRUE") == 0){
         borrar_directorio(punto_montaje);
         crear_directorio(punto_montaje);
-        crear_directorio(dir_files);
-        crear_directorio(dir_physical_blocks);
     }else{
         crear_directorio(punto_montaje);
-        crear_directorio(dir_files);
-        crear_directorio(dir_physical_blocks);
     }
+    crear_directorio(dir_files);
+    crear_directorio(dir_physical_blocks);
+
     levantarConfigSuperblock();
     inicializar_bitmap();
     inicializar_hash();
+    inicizlizar_bloques_fisicos();
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
     log_destroy(logger);
+    
     free(dir_files);
     free(dir_physical_blocks);
     return 0;
@@ -49,8 +50,8 @@ void levantarConfigSuperblock(){
     tam_fs = config_get_int_value(configSuperblock, "FS_SIZE");
     tam_bloque = config_get_int_value(configSuperblock, "BLOCK_SIZE");
     block_count = tam_fs / tam_bloque;
-    char *superblock = cargar_archivo(punto_montaje,"superblock.config");
-    FILE *fp = fopen(superblock, "w");
+    char *superblock = cargar_archivo(punto_montaje,"/superblock.config");
+    FILE *fp = fopen(superblock, "wb+");
     if (!fp) {
         log_error(logger,"Error al abrir superblock.config");
         exit(EXIT_FAILURE);
@@ -173,14 +174,14 @@ char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo){
     } else {
         snprintf(path_creado, path_length, "%s%s", ruta_base,ruta_al_archivo);
     }
-    log_info(logger, "Ruta del archivo: %s", path_creado);
-    log_info(logger, "archivo %s inicializado correctamente.",path_creado);
+    log_debug(logger, "Ruta del archivo: %s", path_creado);
+    log_debug(logger, "archivo %s inicializado correctamente.",path_creado);
 
     return path_creado;
 }
 
 void inicializar_hash() {
-    path_hash = cargar_archivo(punto_montaje,"blocks_hash_index.config");
+    path_hash = cargar_archivo(punto_montaje,"/blocks_hash_index.config");
     FILE *hash_file = fopen(path_hash, "wb+");
     if (!hash_file) {
         log_error(logger,"Error al abrir blocks_hash_index.config");
@@ -206,31 +207,26 @@ char *escribir_en_hash(char *nombre_bloque) {
 
 void crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
     t_archivo_creado archivo;
-            archivo.nombre = nombre_archivo;
-            archivo.hash = escribir_en_hash(nombre_archivo);
+    archivo.nombre = nombre_archivo;
+    archivo.hash = escribir_en_hash(nombre_archivo);
+    archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
+    sprintf(archivo.ruta_base, "%s/%s", dir_files,nombre_archivo);
 
-            archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
-            sprintf(archivo.ruta_base, "%s/%s", dir_files,nombre_archivo);
+    archivo.ruta_tag= malloc(strlen(archivo.ruta_base) + strlen("/") + strlen(tag_archivo)+ 1); //NO SE DONDE IRIA UN FREE
+    sprintf(archivo.ruta_tag, "%s/%s", archivo.ruta_base,tag_archivo);
 
-            archivo.ruta_tag= malloc(strlen(archivo.ruta_base) + strlen("/") + strlen(tag_archivo)+ 1); //NO SE DONDE IRIA UN FREE
-            sprintf(archivo.ruta_tag, "%s/%s", archivo.ruta_base,tag_archivo);
-
-            char* directorio_base = crear_directorio(archivo.ruta_base);
-            char* directorio_tag = crear_directorio(archivo.ruta_tag);
-    log_info(logger,"el Hash de %s es %s, y fue escrito en blocks_hash_index.config",archivo.nombre,archivo.hash);
+    char* directorio_base = crear_directorio(archivo.ruta_base);
+    char* directorio_tag = crear_directorio(archivo.ruta_tag);
+    log_info(logger,"el Hash de %s es %s, y fue escrito en blocks_hash_index.config",archivo.nombre,archivo.hash); //aca iria ocupar los bloques que ocupe el archivo con punteros hacia
     log_info(logger,"La ruta base de %s es %s",archivo.nombre,archivo.ruta_base);
     log_info(logger,"La ruta al tag es%s ",archivo.ruta_tag);
 
     char *config_asociada = malloc(strlen(directorio_tag) + strlen("/metadata.config") + 1); //NO SE DONDE IRIA UN FREE
     sprintf(config_asociada, "%s/%s", directorio_tag,"metadata.config");
 
-
-
-
-
     char *directorio_config_asociada = cargar_archivo("",config_asociada);
     log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
-// ESTO LO VOY A HACER A PARTE PERO ME DA FIACA HACERLO AHORA
+    // ESTO LO VOY A HACER A PARTE PERO ME DA FIACA HACERLO AHORA
     char * estado = "WORK IN PROGRESS";
     FILE * config_estado = fopen(directorio_config_asociada, "wb+");
     if (!config_estado) {
@@ -239,6 +235,26 @@ void crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
     }
     fprintf(config_estado, "ESTADO=%s",estado);
     fclose(config_estado);
-//
+    //
 
+}
+
+void inicizlizar_bloques_fisicos(){
+    for (int i = 0; i < block_count; i++) {
+        t_bloque_fisico bloque;
+        char *nombre_archivo = malloc(20);
+        sprintf(nombre_archivo, "/block%04d.dat", i);
+            bloque.nombre = nombre_archivo;
+            bloque.ocupado = false;
+        log_info(logger, bloque.nombre,bloque.ocupado);
+        
+        char *path_block_dat = cargar_archivo(dir_physical_blocks, nombre_archivo);;
+        FILE *block_dat_file = fopen(path_block_dat, "wb+");
+        if (!block_dat_file) {
+            log_error(logger,"Error al abrir blocks_hash_index.config");
+            exit(EXIT_FAILURE);
+        }
+        fclose(block_dat_file);
+
+    }
 }
