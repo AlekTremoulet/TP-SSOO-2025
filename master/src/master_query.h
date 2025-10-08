@@ -3,5 +3,6 @@
 
 #include <master.h>
 extern char* puerto;
+char * ArchivoQueryInst(char * path_query);
 
 #endif
