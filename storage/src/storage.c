@@ -226,7 +226,8 @@ void crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
 
     char *directorio_config_asociada = cargar_archivo("",config_asociada);
     log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
-    // ESTO LO VOY A HACER A PARTE PERO ME DA FIACA HACERLO AHORA
+    exit(EXIT_FAILURE); // Para que no explote todo,Sacarlo despues
+// ESTO LO VOY A HACER A PARTE PERO ME DA FIACA HACERLO AHORA
     char * estado = "WORK IN PROGRESS";
     FILE * config_estado = fopen(directorio_config_asociada, "wb+");
     if (!config_estado) {
