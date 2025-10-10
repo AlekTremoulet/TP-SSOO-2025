@@ -7,50 +7,48 @@ static struct {
 
 
 static t_instruccion obtener_instruccion(const char* texto) {
-    if (strncmp(texto, "CREATE", 1) == 0)    return CREATE;
-    if (strncmp(texto, "TRUNCATE", 2) == 0)  return TRUNCATE;
-    if (strncmp(texto, "WRITE", 3) == 0)     return WRITE;
-    if (strncmp(texto, "READ", 4) == 0)      return READ;
-    if (strncmp(texto, "TAG", 5) == 0)       return TAG;
-    if (strncmp(texto, "COMMIT", 6) == 0)    return COMMIT;
-    if (strncmp(texto, "FLUSH", 7) == 0)     return FLUSH;
-    if (strncmp(texto, "DELETE", 8) == 0)    return DELETE;
-    if (strcmp(texto, "END") == 9)           return END;
+    if (strcmp(texto, "CREATE")   == 0) return CREATE;
+    if (strcmp(texto, "TRUNCATE") == 0) return TRUNCATE;
+    if (strcmp(texto, "WRITE")    == 0) return WRITE;
+    if (strcmp(texto, "READ")     == 0) return READ;
+    if (strcmp(texto, "TAG")      == 0) return TAG;
+    if (strcmp(texto, "COMMIT")   == 0) return COMMIT;
+    if (strcmp(texto, "FLUSH")    == 0) return FLUSH;
+    if (strcmp(texto, "DELETE")   == 0) return DELETE;
+    if (strcmp(texto, "END")      == 0) return END;
     return INVALID_INSTRUCTION;
 }
+
 
 static inline void quitar_salto_de_linea(char* cadena) {
     if (!cadena) 
         return;
     int L = (int)strlen(cadena);
-    if (L > 0 && s[L-1] == '\n') 
+    if (L > 0 && cadena[L-1] == '\n') 
         cadena[L-1] = '\0';
 }
 
-static qi_status_t obtener_instruccion_y_args(parametros_worker* parametro, const char* linea_instruccion) {
-    if (!linea_instruccion) 
+static void liberar_string_split(char** array) {
+    for (int i = 0; array[i] != NULL; i++)
+        free(array[i]);
+    free(array);
+}
+
+qi_status_t obtener_instruccion_y_args(void* parametros_worker, const char* linea, int query_id) {
+    if (!linea || strlen(linea) == 0)
+        return QI_OK; //osea, si viene una linea vacia, que pase de largo. Tipo, ta bien
+
+    char** partes = string_split(linea, " ");
+    if (!partes || !partes[0]) {
+        liberar_string_split(partes);
         return QI_ERR_PARSE;
-
-    char* linea = strdup(linea_instruccion);
-
-    quitar_salto_de_linea(linea); //puede que solo reciba un /n entonces lo cambia por un /0
-    if (!linea) { 
-        free(linea); 
-        return QI_OK; 
-        }
-
-    char* opcode = strchr(linea, ' ');
-    if (opcode) {
-        *opcode = '\0';
-        args = opcode + 1;
     }
 
-    t_instruccion instruccion_leida = obtener_instruccion(opcode);
+    t_instruccion instr = obtener_instruccion(partes[0]);
+    qi_status_t status = interpretar_Instruccion(instr, partes, query_id);
 
-    qi_status_t estado = interpretar_Instruccion(instruccion_leida, args, parametros.id);
-
-    free(linea);
-    return st;
+    liberar_string_split(partes);
+    return status;
 }
 
 static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out) {
@@ -84,49 +82,124 @@ static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** t
 }
 
 
-qi_status_t interpretar_Instruccion(t_instruccion instruccion, char* argumentos, int query_id) {
-    char* nom_y_tag = strchr(argumentos, ' ');
-    if (nom_y_tag) {
-        *nom_y_tag = '\0';
-        args = nom_y_tag + 1;
-    }
-    separar_nombre_y_tag(nom_y_tag,archivo,tag);
-    
+qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int query_id) {
+    char *archivo = NULL, *tag = NULL;
+    qi_status_t result = QI_OK;
+
     switch (instruccion) {
         case CREATE:
-            return ejecutar_CREATE(archivo,tag, query_id);
+            if (!args[1]) 
+                return QI_ERR_PARSE;
+            if (!separar_nombre_y_tag(args[1], &archivo, &tag)) 
+                return QI_ERR_PARSE;
+            result = ejecutar_CREATE(archivo, tag, query_id);
+            break;
 
         case TRUNCATE:
-            return ejecutar_TRUNCATE(archivo,tag,args,query_id);
+            if (!args[1] || !args[2]) 
+                return QI_ERR_PARSE;
+            separar_nombre_y_tag(args[1], &archivo, &tag);
+            result = ejecutar_TRUNCATE(archivo, tag, atoi(args[2]), query_id);
+            break;
 
         case WRITE:
-            return ejecutar_WRITE(archivo,tag,args, query_id);
+            if (!args[1] || !args[2] || !args[3]) 
+                return QI_ERR_PARSE;
+            separar_nombre_y_tag(args[1], &archivo, &tag);
+            result = ejecutar_WRITE(archivo, tag, atoi(args[2]), args[3], query_id);
+            break;
 
         case READ:
-            return ejecutar_READ(archivo,tag,args, query_id);
+            if (!args[1] || !args[2] || !args[3]) 
+                return QI_ERR_PARSE;
+            separar_nombre_y_tag(args[1], &archivo, &tag);
+            result = ejecutar_READ(archivo, tag, atoi(args[2]), atoi(args[3]), query_id);
+            break;
 
         case TAG:
-            return ejecutar_TAG(archivo,tag,args, query_id);
+            if (!args[1] || !args[2]) 
+                return QI_ERR_PARSE;
+            char *arch_ori, *tag_ori, *arch_dest, *tag_dest;
+            separar_nombre_y_tag(args[1], &arch_ori, &tag_ori);
+            separar_nombre_y_tag(args[2], &arch_dest, &tag_dest);
+            result = ejecutar_TAG(arch_ori, tag_ori, arch_dest, tag_dest, query_id);
+            free(arch_ori); 
+            free(tag_ori); 
+            free(arch_dest); 
+            free(tag_dest);
+            return result;
 
         case COMMIT:
-            return ejecutar_COMMIT(archivo,tag, query_id);
+            if (!args[1]) 
+                return QI_ERR_PARSE;
+            separar_nombre_y_tag(args[1], &archivo, &tag);
+            result = ejecutar_COMMIT(archivo, tag, query_id);
+            break;
 
         case FLUSH:
-            return ejecutar_FLUSH(archivo,tag, query_id);
+            if (!args[1]) 
+                return QI_ERR_PARSE;
+            separar_nombre_y_tag(args[1], &archivo, &tag);
+            result = ejecutar_FLUSH(archivo, tag, query_id);
+            break;
 
         case DELETE:
-            return ejecutar_DELETE(archivo,tag, query_id);
+            if (!args[1]) 
+                return QI_ERR_PARSE;
+            separar_nombre_y_tag(args[1], &archivo, &tag);
+            result = ejecutar_DELETE(archivo, tag, query_id);
+            break;
 
         case END:
             return QI_END;
 
         default:
-            log_error(logger, "Instrucción desconocida");
-            return QI_ERR_PARSE;
+            log_error(logger, "Instrucción desconocida: %s", args[0]);
+            result = QI_ERR_PARSE;
+            break;
     }
+
+    free(archivo);
+    free(tag);
+    return result;
 }
 
-qi_status_t ejecutar_CREATE(archivo,tag, query_id){
-    crear_paquete()
-    
+void ejecutar_query(const char* path_query, int query_id) {
+    FILE* arch_inst = fopen(path_query, "r");
+    if (!arch_inst) {
+        log_error(logger, "No se pudo abrir el archivo de Query: %s", path_query);
+        return;
+    }
+
+    log_info(logger, "## Query %d: Se recibe la Query. El path de operaciones es: %s", query_id, path_query);
+
+    char* linea = NULL;
+    size_t len = 0;
+    ssize_t read;
+    int program_counter = 0;
+
+    while ((read = getline(&linea, &len, arch_inst)) != -1) {
+        quitar_salto_de_linea(linea);
+
+        log_info(logger, "## Query %d: FETCH - Program Counter: %d - %s", query_id, program_counter, linea);
+
+        qi_status_t st = obtener_instruccion_y_args(NULL, linea, query_id);
+
+        log_info(logger, "## Query %d: - Instrucción realizada: %s", query_id, linea);
+
+        if (st == QI_END) {
+            log_info(logger, "## Query %d: Query finalizada correctamente", query_id);
+            break;
+        }
+
+        if (st == QI_ERR_PARSE) {
+            log_error(logger, "## Query %d: Error de parseo en línea %d", query_id, program_counter);
+            break;
+        }
+
+        program_counter++;
+    }
+
+    free(linea);
+    fclose(arch_inst);
 }
