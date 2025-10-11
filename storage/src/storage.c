@@ -188,8 +188,6 @@ void inicializar_hash() {
         exit(EXIT_FAILURE);
     }
     fclose(hash_file);
-    // esto esta puesto hasta que haga la parte de crear bloques
-    crear_archivo_en_FS("initial_file","BASE");
 }
 
 char *escribir_en_hash(char *nombre_bloque) {
@@ -226,16 +224,23 @@ void crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
 
     char *directorio_config_asociada = cargar_archivo("",config_asociada);
     log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
-    exit(EXIT_FAILURE); // Para que no explote todo,Sacarlo despues
-// ESTO LO VOY A HACER A PARTE PERO ME DA FIACA HACERLO AHORA
+
+    
+    // ESTO LO VOY A HACER A PARTE PERO ME DA FIACA HACERLO AHORA
     char * estado = "WORK IN PROGRESS";
-    FILE * config_estado = fopen(directorio_config_asociada, "wb+");
-    if (!config_estado) {
+    char * Blocks = "[]"; // getBlockesMetadata();
+    char * Tamanno = "0"; // getTamannoMetadata();
+
+    FILE * config_archivo_metadata = fopen(directorio_config_asociada, "wb+");
+    if (!config_archivo_metadata) {
         log_error(logger,"Error al abrir el .config");
         exit(EXIT_FAILURE);
     }
-    fprintf(config_estado, "ESTADO=%s",estado);
-    fclose(config_estado);
+    fprintf(config_archivo_metadata, "ESTADO=%s\n",estado);
+    fprintf(config_archivo_metadata, "Blocks=%s\n",Blocks);
+    fprintf(config_archivo_metadata, "Tamaño=%s\n",Tamanno);
+
+    fclose(config_archivo_metadata);
     //
 
 }
@@ -258,4 +263,6 @@ void inicizlizar_bloques_fisicos(){
         fclose(block_dat_file);
 
     }
+    // esto esta puesto hasta que haga la parte de crear bloques
+    crear_archivo_en_FS("initial_file","BASE"); 
 }
