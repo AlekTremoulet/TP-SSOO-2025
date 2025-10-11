@@ -49,5 +49,6 @@ char* borrar_directorio(const char* path_a_borrar);
 char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo);
 void inicializar_hash();
 char *escribir_en_hash(char *nombre_bloque);
-
+void inicializar_bloques_fisicos();
+void inicializar_bloques_logicos();
 #endif

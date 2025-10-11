@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     levantarConfigSuperblock();
     inicializar_bitmap();
     inicializar_hash();
-    inicizlizar_bloques_fisicos();
+    inicializar_bloques_fisicos();
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -46,9 +46,9 @@ void levantarConfig(){
 
 
 void levantarConfigSuperblock(){
-    configSuperblock = config_create("./superblock.config");
-    tam_fs = config_get_int_value(configSuperblock, "FS_SIZE");
-    tam_bloque = config_get_int_value(configSuperblock, "BLOCK_SIZE");
+
+    tam_fs = config_get_int_value(config, "FS_SIZE");
+    tam_bloque = config_get_int_value(config, "BLOCK_SIZE");
     block_count = tam_fs / tam_bloque;
     char *superblock = cargar_archivo(punto_montaje,"/superblock.config");
     FILE *fp = fopen(superblock, "wb+");
@@ -245,7 +245,7 @@ void crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
 
 }
 
-void inicizlizar_bloques_fisicos(){
+void inicializar_bloques_fisicos(){
     for (int i = 0; i < block_count; i++) {
         t_bloque_fisico bloque;
         char *nombre_archivo = malloc(20);
@@ -265,4 +265,9 @@ void inicizlizar_bloques_fisicos(){
     }
     // esto esta puesto hasta que haga la parte de crear bloques
     crear_archivo_en_FS("initial_file","BASE"); 
+}
+
+
+void inicializar_bloques_logicos(){
+
 }
