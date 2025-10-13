@@ -35,9 +35,11 @@ typedef struct {
 } t_archivo_creado;
 
 typedef struct {
-    char * nombre;
-    bool ocupado;
+    char * Estado;
+    char * Blocks; 
+    char * Tamanno;
 } t_bloque_fisico;
+
 
 
 int main(int argc, char* argv[]);
@@ -51,4 +53,6 @@ void inicializar_hash();
 char *escribir_en_hash(char *nombre_bloque);
 void inicializar_bloques_fisicos();
 void inicializar_bloques_logicos();
+char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo);
+
 #endif

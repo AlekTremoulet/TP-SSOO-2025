@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
     inicializar_bitmap();
     inicializar_hash();
     inicializar_bloques_fisicos();
+    inicializar_bloques_logicos();
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -191,22 +192,22 @@ void inicializar_hash() {
 }
 
 char *escribir_en_hash(char *nombre_bloque) {
-    FILE * hash_file = fopen(path_hash, "wb+");
+    FILE * hash_file = fopen(path_hash, "ab+");
     if (!hash_file) {
         log_error(logger,"Error al abrir blocks_hash_index.config");
         exit(EXIT_FAILURE);
     }
     size_t longitud_bloque = strlen(nombre_bloque);
     char *nombre_bloque_hash = crypto_md5(nombre_bloque, longitud_bloque);
-    fprintf(hash_file, "%s=%s",nombre_bloque_hash,nombre_bloque);
+    nombre_bloque = nombre_bloque + 1; //Omitir el primer caracter
+    fprintf(hash_file, "%s=%s\n",nombre_bloque_hash,nombre_bloque);
     fclose(hash_file);
     return nombre_bloque_hash;
 }
 
-void crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
+char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
     t_archivo_creado archivo;
     archivo.nombre = nombre_archivo;
-    archivo.hash = escribir_en_hash(nombre_archivo);
     archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
     sprintf(archivo.ruta_base, "%s/%s", dir_files,nombre_archivo);
 
@@ -215,7 +216,6 @@ void crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
 
     char* directorio_base = crear_directorio(archivo.ruta_base);
     char* directorio_tag = crear_directorio(archivo.ruta_tag);
-    log_info(logger,"el Hash de %s es %s, y fue escrito en blocks_hash_index.config",archivo.nombre,archivo.hash); //aca iria ocupar los bloques que ocupe el archivo con punteros hacia
     log_info(logger,"La ruta base de %s es %s",archivo.nombre,archivo.ruta_base);
     log_info(logger,"La ruta al tag es%s ",archivo.ruta_tag);
 
@@ -227,33 +227,33 @@ void crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
 
     
     // ESTO LO VOY A HACER A PARTE PERO ME DA FIACA HACERLO AHORA
-    char * estado = "WORK IN PROGRESS";
-    char * Blocks = "[]"; // getBlockesMetadata();
-    char * Tamanno = "0"; // getTamannoMetadata();
+    t_bloque_fisico Bloque_F; 
+    Bloque_F.Estado = "WORK IN PROGRESS";
+    Bloque_F.Blocks = "[]"; // getBlockesMetadata();
+    Bloque_F.Tamanno = "0"; // getTamannoMetadata();
 
     FILE * config_archivo_metadata = fopen(directorio_config_asociada, "wb+");
     if (!config_archivo_metadata) {
         log_error(logger,"Error al abrir el .config");
         exit(EXIT_FAILURE);
     }
-    fprintf(config_archivo_metadata, "ESTADO=%s\n",estado);
-    fprintf(config_archivo_metadata, "Blocks=%s\n",Blocks);
-    fprintf(config_archivo_metadata, "Tamaño=%s\n",Tamanno);
+    fprintf(config_archivo_metadata, "ESTADO=%s\n",Bloque_F.Estado);
+    fprintf(config_archivo_metadata, "Blocks=%s\n",Bloque_F.Blocks);
+    fprintf(config_archivo_metadata, "Tamaño=%s\n",Bloque_F.Tamanno);
 
     fclose(config_archivo_metadata);
-    //
+    char *dir_logical_blocks = malloc(strlen(directorio_tag) + strlen("/logical_blocks") + 1);
+    sprintf(dir_logical_blocks, "%s/%s", directorio_tag,"logical_blocks");
+    crear_directorio(dir_logical_blocks);
 
+    return dir_logical_blocks;
 }
 
 void inicializar_bloques_fisicos(){
     for (int i = 0; i < block_count; i++) {
-        t_bloque_fisico bloque;
         char *nombre_archivo = malloc(20);
         sprintf(nombre_archivo, "/block%04d.dat", i);
-            bloque.nombre = nombre_archivo;
-            bloque.ocupado = false;
-        log_info(logger, bloque.nombre,bloque.ocupado);
-        
+
         char *path_block_dat = cargar_archivo(dir_physical_blocks, nombre_archivo);;
         FILE *block_dat_file = fopen(path_block_dat, "wb+");
         if (!block_dat_file) {
@@ -261,13 +261,19 @@ void inicializar_bloques_fisicos(){
             exit(EXIT_FAILURE);
         }
         fclose(block_dat_file);
+        escribir_en_hash(nombre_archivo);
 
     }
-    // esto esta puesto hasta que haga la parte de crear bloques
-    crear_archivo_en_FS("initial_file","BASE"); 
 }
 
-
 void inicializar_bloques_logicos(){
+    char * Base = crear_archivo_en_FS("initial_file","BASE"); 
+    char *dir_logical_base = malloc(strlen(Base) + strlen("/000000.dat") + 1);
+    char *dir_phisical_base = malloc(strlen(dir_physical_blocks) + strlen("/block0000.dat") + 1);
 
+    sprintf(dir_logical_base ,"%s/%s", Base,"000000.dat");
+    sprintf(dir_phisical_base ,"%s/%s", dir_physical_blocks,"block0000.dat");
+
+    link(dir_phisical_base,dir_logical_base); //ESTO ESTA MAL >:( (Hardcodeado)
+    
 }
