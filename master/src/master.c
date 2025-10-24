@@ -90,7 +90,7 @@ void *server_mh(void *args) { // Server Multi-hilo
 
 // atiendo UNA conexion entrante (puede ser Query o Worker) y dejo el socket abierto
 // en QUERY: encolo para FIFO - en WORKER: marco como libre
-static void *handler_cliente(void *arg) {
+void *handler_cliente(void *arg) {
     int socket_nuevo = *(int*)arg;
     free(arg);
 
@@ -196,7 +196,7 @@ static void *handler_cliente(void *arg) {
 
 // planificador FIFO: toma la primera query READY y el primer worker libre
 // y le envia al worker (path, id_query)
-static void *planificador_fifo(void *_) {
+void *planificador_fifo(void *_) {
     while (1) {
         // espero hasta tener al menos 1 worker libre y 1 query en READY
         sem_wait(workers_libres->sem);
