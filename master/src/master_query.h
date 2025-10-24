@@ -1,5 +1,5 @@
-#ifndef MASTER_MAIN_
-#define MASTER_MAIN_
+#ifndef MASTER_QUERY_
+#define MASTER_QUERY_
 
 #include <master.h>
 extern char* puerto;

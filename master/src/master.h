@@ -12,7 +12,7 @@ extern char * puerto;
 extern int id_query_actual;
 
 int main(int argc, char* argv[]);
-void levantarConfig();
+void levantarConfig(char *args);
 void* server_mh(void *args);
 
 #endif

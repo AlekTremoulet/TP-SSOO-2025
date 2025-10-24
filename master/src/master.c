@@ -35,7 +35,8 @@ int main(int argc, char* argv[]) {
     pthread_t tid_server_mh;
     pthread_t tid_planificador;
 
-    levantarConfig();
+    
+    levantarConfig(argv[argc-1]);
 
     // FIFO
     pthread_create(&tid_planificador, NULL, planificador_fifo, NULL);
@@ -50,13 +51,18 @@ int main(int argc, char* argv[]) {
 }
 
 
-void levantarConfig(){
-
-    config = config_create("./master.config");
+void levantarConfig(char *args){
+    
+    char * configpath = malloc(strlen(args)+strlen("./")+strlen(".config"));
+    strcat(configpath, "./");
+    strcat(configpath, args);
+    strcat(configpath, ".config");
+    config = config_create(configpath);
     char *value = config_get_string_value(config, "LOG_LEVEL");
     current_log_level = log_level_from_string(value);
     puerto= config_get_string_value(config, "PUERTO_ESCUCHA");
     logger = log_create("master.log", "MASTER", 1, current_log_level);
+    log_debug(logger, "Config file: %s", configpath);
 
     // inicializo colas FIFO
     cola_ready_queries = inicializarLista();
