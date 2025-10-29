@@ -273,6 +273,7 @@ void inicializar_bloques_logicos(){
 
     sprintf(dir_logical_base ,"%s/%s", Base,"000000.dat");
     sprintf(dir_phisical_base ,"%s/%s", dir_physical_blocks,"block0000.dat");
+    ocupar_espacio_bitmap(0);
 
     link(dir_phisical_base,dir_logical_base); //ESTO ESTA MAL >:( (Hardcodeado)
     

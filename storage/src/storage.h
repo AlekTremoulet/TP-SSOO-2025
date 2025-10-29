@@ -27,6 +27,8 @@ int tam_fs;
 int tam_bloque;
 int block_count;
 
+char *path_bitmap;
+
 typedef struct {
     char * nombre;
     char * hash;

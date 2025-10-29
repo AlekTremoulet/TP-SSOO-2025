@@ -1,20 +1,9 @@
 #include "bitmap.h"
-
-void inicializar_libres() {
-    libres = 0;
-    int i = 0;
-    for (i; i < bitarray_get_max_bit(bitmap); i++) {
-        if (!bitarray_test_bit(bitmap, i)) {
-            libres++;
-        }
-    }
-    bits_ocupados = i - libres;
-}
  
 void inicializar_bitmap() {
     size_t tamanio_bitmap = (size_t)ceil((double)block_count/8);;
     
-    char *path_bitmap = cargar_ruta("bitmap.bin");
+    path_bitmap = cargar_ruta("bitmap.bin");
 
 
     bitmap_file = fopen(path_bitmap, "rb+");
@@ -69,17 +58,17 @@ void inicializar_bitmap() {
         exit(EXIT_FAILURE);
     }
     log_info(logger, "Bitmap inicializado correctamente.");
-    free(path_bitmap);
+
 }
 
-bool espacio_disponible(uint32_t cantidad) {
-    if(libres >= cantidad){
-        return true;
+int espacio_disponible(t_bitarray * bitmap) {
+    for (int i = 0; i < bitarray_get_max_bit(bitmap) ; i++){
+        if (bitarray_test_bit(bitmap,i) != 1) return i;
     }
-    return false;
+    return -1;
 }
 
-int cargar_bitmap() {
+int ocupar_espacio_bitmap(int offset_bit) {
 
     FILE* bitmap_file = fopen(path_bitmap, "rb+");
     if (bitmap_file == NULL) {
@@ -87,7 +76,10 @@ int cargar_bitmap() {
         return -1;
     }
 
+    rewind(bitmap_file);
     size_t bytes_bitmap = block_count / 8;
+    bitarray_set_bit(bitmap,offset_bit);
+
     if (fwrite(bitmap->bitarray, bytes_bitmap, 1, bitmap_file) != 1) {
         log_info(logger, "Error al escribir el bitmap en bitmap.bin");
         fclose(bitmap_file);
@@ -97,6 +89,29 @@ int cargar_bitmap() {
     
     return 0;
 }
+
+int liberar_espacio_bitmap(int offset_bit) {
+
+    FILE* bitmap_file = fopen(path_bitmap, "rb+");
+    if (bitmap_file == NULL) {
+        log_info(logger, "Error al abrir el archivo bitmap.bin para escritura.");
+        return -1;
+    }
+
+    rewind(bitmap_file);
+    size_t bytes_bitmap = block_count / 8;
+    bitarray_clean_bit(bitmap,offset_bit);
+
+    if (fwrite(bitmap->bitarray, bytes_bitmap, 1, bitmap_file) != 1) {
+        log_info(logger, "Error al escribir el bitmap en bitmap.bin");
+        fclose(bitmap_file);
+        return -1;
+    }
+    fclose(bitmap_file);
+    
+    return 0;
+}
+
 void destruir_bitmap() {
     if (!bitmap_file) {
         log_info(logger, "Error al abrir el archivo bitmap.bin para escribir");
@@ -130,3 +145,13 @@ char *cargar_ruta(char *ruta_al_archivo){
 
     return path_creado;
 }
+
+void buscar_bit_libre(){
+    if (espacio_disponible(bitmap) !=-1){
+        ocupar_espacio_bitmap(espacio_disponible(bitmap));
+    } else{
+        ocupar_espacio_bitmap(libres);
+        libres++;
+        if (libres > bitarray_get_max_bit(bitmap)) libres = 0; 
+    }
+};

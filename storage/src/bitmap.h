@@ -19,10 +19,10 @@ static t_bitarray* bitmap;
 static FILE* bitmap_file;
 extern t_log *logger;
 
-int libres;
+int libres = 0;
 
 uint32_t bits_ocupados;
-char *path_bitmap;
+extern char *path_bitmap;
 
 typedef struct {
     uint32_t bloque_indice;
@@ -33,10 +33,12 @@ typedef struct {
 
 
 void inicializar_bitmap();
-bool espacio_disponible(uint32_t cantidad);
-void liberar_bloque(uint32_t bloque);
-int cargar_bitmap();
+int espacio_disponible(t_bitarray * bitmap);
+// void liberar_bloque(uint32_t bloque);
+int ocupar_espacio_bitmap(int offset_bit);
+int liberar_espacio_bitmap(int offset_bit);
 void destruir_bitmap();
 char *cargar_ruta(char *ruta_al_archivo);
+void buscar_bit_libre();
 
 #endif
