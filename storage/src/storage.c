@@ -18,6 +18,7 @@ int main(int argc, char* argv[]) {
     inicializar_hash();
     inicializar_bloques_fisicos();
     inicializar_bloques_logicos();
+    // Copiar_tag("/home/utnso/storage/files/initial_file","/home/utnso/storage/files/initial_file2");
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -205,7 +206,7 @@ char *escribir_en_hash(char *nombre_bloque) {
     return nombre_bloque_hash;
 }
 
-char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
+char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) { //Operacion de crear archivo
     t_archivo_creado archivo;
     archivo.nombre = nombre_archivo;
     archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
