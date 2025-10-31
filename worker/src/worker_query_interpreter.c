@@ -175,7 +175,7 @@ void ejecutar_query(const char* path_query, int query_id) {
 
     char* linea = NULL;
     size_t len = 0;
-    ssize_t read;
+    size_t read;
     int program_counter = 0;
 
     while ((read = getline(&linea, &len, arch_inst)) != -1) {
@@ -202,4 +202,193 @@ void ejecutar_query(const char* path_query, int query_id) {
 
     free(linea);
     fclose(arch_inst);
+}
+
+qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id) {
+    log_info(logger, "## Query %d: Ejecutando CREATE %s:%s", query_id, archivo, tag);
+
+    t_paquete* paquete = crear_paquete(OP_CREATE);
+    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
+    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
+    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+
+    enviar_paquete(paquete, socket_storage);
+    eliminar_paquete(paquete);
+
+    log_info(logger, "## Query %d: Enviado CREATE -> Storage (%s:%s)", query_id, archivo, tag);
+
+    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    if (respuesta == OK) {
+        log_info(logger, "## Query %d: CREATE exitoso", query_id);
+        return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Error en CREATE", query_id);
+        return QI_ERR_PARSE;
+    }
+}
+
+qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio, int query_id) {
+    log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", query_id, archivo, tag, tamanio);
+
+    t_paquete* paquete = crear_paquete(OP_TRUNCATE);
+    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
+    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
+    agregar_a_paquete(paquete, &tamanio, sizeof(int));
+    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+
+    enviar_paquete(paquete, socket_storage);
+    eliminar_paquete(paquete);
+
+    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    if (respuesta == OK) {
+        log_info(logger, "## Query %d: TRUNCATE exitoso", query_id);
+        return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Error en TRUNCATE", query_id);
+        return QI_ERR_PARSE;
+    }
+}
+
+qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido, int query_id) {
+    log_info(logger, "## Query %d: Ejecutando WRITE %s:%s %d %s", query_id, archivo, tag, dir_base, contenido);
+    /*
+    if(!memoria_tiene_paginas_necesarias()) //hay que modelarla
+            solicitar_paginas_a_storage() 
+    */
+    /*osea, esto ira en el worker query memory, estoy pidiendo las paginas aca a storage*(solicitar_paginas_a_storage()):*/
+    t_paquete* paquete = crear_paquete(OP_WRITE);
+    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
+    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
+    agregar_a_paquete(paquete, &dir_base, sizeof(int));
+    agregar_a_paquete(paquete, contenido, strlen(contenido) + 1);
+    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+
+    enviar_paquete(paquete, socket_storage);
+    eliminar_paquete(paquete);
+
+    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    if (respuesta == OK) {
+        log_info(logger, "## Query %d: WRITE exitoso", query_id);
+        return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Error en WRITE", query_id);
+        return QI_ERR_PARSE;
+    }
+}
+
+qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio, int query_id) {
+    log_info(logger, "## Query %d: Ejecutando READ %s:%s %d %d", query_id, archivo, tag, dir_base, tamanio);
+    /*
+    if(!memoria_tiene_paginas_necesarias()) //hay que modelarla
+            solicitar_paginas_a_storage() 
+    */ 
+    t_paquete* paquete = crear_paquete(OP_READ);
+    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
+    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
+    agregar_a_paquete(paquete, &dir_base, sizeof(int));
+    agregar_a_paquete(paquete, &tamanio, sizeof(int));
+    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+
+    enviar_paquete(paquete, socket_storage);
+    eliminar_paquete(paquete);
+
+    char* buffer = malloc(tamanio + 1);
+    memcpy(buffer, memoria->contenido + direccion_base, tamanio);
+    buffer[tamanio] = '\0';
+
+    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    if (respuesta == OK) {
+        log_info(logger, "## Query %d: READ exitoso", query_id);
+        return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Error en READ", query_id);
+        return QI_ERR_PARSE;
+    }
+}
+
+qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* tag_dest, int query_id) {
+    log_info(logger, "## Query %d: Ejecutando TAG %s:%s -> %s:%s", query_id, arch_ori, tag_ori, arch_dest, tag_dest);
+
+    t_paquete* paquete = crear_paquete(OP_TAG);
+    agregar_a_paquete(paquete, arch_ori, strlen(arch_ori) + 1);
+    agregar_a_paquete(paquete, tag_ori, strlen(tag_ori) + 1);
+    agregar_a_paquete(paquete, arch_dest, strlen(arch_dest) + 1);
+    agregar_a_paquete(paquete, tag_dest, strlen(tag_dest) + 1);
+    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+
+    enviar_paquete(paquete, socket_storage);
+    eliminar_paquete(paquete);
+
+    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    if (respuesta == OK) {
+        log_info(logger, "## Query %d: TAG exitoso", query_id);
+        return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Error en TAG", query_id);
+        return QI_ERR_PARSE;
+    }
+}
+
+qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id) {
+    log_info(logger, "## Query %d: Ejecutando COMMIT %s:%s", query_id, archivo, tag);
+
+    t_paquete* paquete = crear_paquete(OP_COMMIT);
+    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
+    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
+    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+
+    enviar_paquete(paquete, socket_storage);
+    eliminar_paquete(paquete);
+
+    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    if (respuesta == OK) {
+        log_info(logger, "## Query %d: COMMIT exitoso", query_id);
+        return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Error en COMMIT", query_id);
+        return QI_ERR_PARSE;
+    }
+}
+
+qi_status_t ejecutar_FLUSH(char* archivo, char* tag, int query_id) {
+    log_info(logger, "## Query %d: Ejecutando FLUSH %s:%s", query_id, archivo, tag);
+    
+    /*no lo tengo muy claro, pero seguro es porque se hace en memoria xd*/
+    t_paquete* paquete = crear_paquete(OP_FLUSH);
+    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
+    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
+    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+
+    enviar_paquete(paquete, socket_storage);
+    eliminar_paquete(paquete);
+
+    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    if (respuesta == OK) {
+        log_info(logger, "## Query %d: FLUSH exitoso", query_id);
+        return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Error en FLUSH", query_id);
+        return QI_ERR_PARSE;
+    }
+}
+
+qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id) {
+    log_info(logger, "## Query %d: Ejecutando DELETE %s:%s", query_id, archivo, tag);
+
+    t_paquete* paquete = crear_paquete(OP_DELETE);
+    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
+    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
+    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+
+    enviar_paquete(paquete, socket_storage);
+    eliminar_paquete(paquete);
+
+    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    if (respuesta == OK) {
+        log_info(logger, "## Query %d: DELETE exitoso", query_id);
+        return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Error en DELETE", query_id);
+        return QI_ERR_PARSE;
+    }
 }
