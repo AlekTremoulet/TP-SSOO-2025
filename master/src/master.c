@@ -5,8 +5,7 @@ t_config *config = NULL;
 t_log_level current_log_level;
 char *puerto = NULL;
 
-static void *handler_cliente(void *arg);
-static void *planificador_fifo(void *_);
+char * algo_planificacion;
 
 int id_query_actual;
 
@@ -39,7 +38,7 @@ int main(int argc, char* argv[]) {
     levantarConfig(argv[argc-1]);
 
     // FIFO
-    pthread_create(&tid_planificador, NULL, planificador_fifo, NULL);
+    pthread_create(&tid_planificador, NULL, planificador, NULL);
     pthread_detach(tid_planificador); // pthread_detach =  el hilo se auto-limpia cuando termina
     // (como el planificador corre para siempre y nunca se lo va a esperar con join, se detacha y listo)
 
@@ -50,6 +49,13 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
+void * planificador(void *_){
+    if(!strcmp(algo_planificacion, "FIFO")){
+        planificador_fifo();
+    }else if (!strcmp(algo_planificacion, "PRIORIDADES")){
+        planificador_prioridades();
+    }
+}
 
 void levantarConfig(char *args){
     
@@ -63,6 +69,8 @@ void levantarConfig(char *args){
     puerto= config_get_string_value(config, "PUERTO_ESCUCHA");
     logger = log_create("master.log", "MASTER", 1, current_log_level);
     log_debug(logger, "Config file: %s", configpath);
+
+    algo_planificacion = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
 
     // inicializo colas FIFO
     cola_ready_queries = inicializarLista();
@@ -196,7 +204,7 @@ void *handler_cliente(void *arg) {
 
 // planificador FIFO: toma la primera query READY y el primer worker libre
 // y le envia al worker (path, id_query)
-void *planificador_fifo(void *_) {
+void planificador_fifo() {
     while (1) {
         // espero hasta tener al menos 1 worker libre y 1 query en READY
         sem_wait(workers_libres->sem);
@@ -232,7 +240,12 @@ void *planificador_fifo(void *_) {
 
         // TODO: el worker queda ocupado hasta implementar la devolucion
     }
-    return NULL;
+    return;
+}
+
+void planificador_prioridades(){
+    log_error(logger, "El planificador de prioridades no esta definido todavia");
+    return;
 }
 
 // TODO: manejar DEVOLUCION_WORKER (id_query, status)
