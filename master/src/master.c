@@ -7,6 +7,8 @@ char *puerto = NULL;
 
 pthread_mutex_t * mutex_nivel_multiprocesamiento;
 int nivel_multiprocesamiento;
+pthread_mutex_t * mutex_cantidad_workers;
+int cantidad_workers;
 
 char * algo_planificacion;
 
@@ -26,8 +28,11 @@ typedef struct {
 } worker_t;
 
 // colas thread-safe
-list_struct_t *cola_ready_queries;   // elementos: query_t*
-list_struct_t *workers_libres;       // elementos: worker_t*
+list_struct_t *cola_ready_queries;  // elementos: query_t*
+list_struct_t *cola_exec_queries;   // elementos: query_t*
+
+list_struct_t *workers_libres;      // elementos: worker_t*
+list_struct_t *workers_busy;        // elementos: worker_t*
 
 pthread_mutex_t m_id;
 
@@ -87,8 +92,11 @@ void levantarConfig(char *args){
 
 void inicializarEstructurasMaster(){
     cola_ready_queries = inicializarLista();
+    cola_exec_queries = inicializarLista();
+    workers_busy = inicializarLista();
     workers_libres = inicializarLista();
     mutex_nivel_multiprocesamiento = inicializarMutex();
+    mutex_cantidad_workers = inicializarMutex();
 }
 
 void aumentar_nivel_multiprocesamiento(){
@@ -106,6 +114,24 @@ int obtener_nivel_multiprocesamiento(){
     pthread_mutex_lock(mutex_nivel_multiprocesamiento);
     int return_value = nivel_multiprocesamiento;
     pthread_mutex_unlock(mutex_nivel_multiprocesamiento);
+
+    return return_value;
+}
+void aumentar_cantidad_workers(){
+    pthread_mutex_lock(mutex_cantidad_workers);
+    cantidad_workers++;
+    pthread_mutex_unlock(mutex_cantidad_workers);
+}
+
+void disminuir_cantidad_workers(){
+    pthread_mutex_lock(mutex_cantidad_workers);
+    cantidad_workers--;
+    pthread_mutex_unlock(mutex_cantidad_workers);
+}
+int obtener_cantidad_workers(){
+    pthread_mutex_lock(mutex_cantidad_workers);
+    int return_value = cantidad_workers;
+    pthread_mutex_unlock(mutex_cantidad_workers);
 
     return return_value;
 }
@@ -173,10 +199,7 @@ void *handler_cliente(void *arg) {
                 archivo_recv, prioridad, id_asignado, obtener_nivel_multiprocesamiento());
 
             // encolo al final -> FIFO
-            pthread_mutex_lock(cola_ready_queries->mutex);
-            list_add(cola_ready_queries->lista, q);
-            pthread_mutex_unlock(cola_ready_queries->mutex);
-            sem_post(cola_ready_queries->sem);
+            encolar_query(cola_ready_queries, q, -1);
             // FIFO
 
             // libero lo deserializado (archivo_recv y prioridad_ptr)
@@ -189,8 +212,6 @@ void *handler_cliente(void *arg) {
             int *id_ptr = list_remove(paquete_recv, 0);
             int worker_id = *id_ptr;
 
-            log_info(logger, "Se conecta un Worker con Id: <%d> ", worker_id);
-
             enviar_paquete_ok(socket_nuevo);
 
             // FIFO - registro al worker como libre
@@ -198,11 +219,12 @@ void *handler_cliente(void *arg) {
             w->id            = worker_id;
             w->socket_worker = socket_nuevo;       // guardo la conexion al worker
 
-            pthread_mutex_lock(workers_libres->mutex);
-            list_add(workers_libres->lista, w);
-            pthread_mutex_unlock(workers_libres->mutex);
-            sem_post(workers_libres->sem);
+            encolar_query(workers_libres, w, -1);
             // FIFO
+
+            aumentar_cantidad_workers();
+
+            log_info(logger, "##Se conecta un Worker con Id: <%d> - Cantidad total de Workers: <%d> ", worker_id, obtener_cantidad_workers());
 
             list_destroy_and_destroy_elements(paquete_recv, free);
             break;
@@ -230,6 +252,66 @@ void *handler_cliente(void *arg) {
     return NULL;
 }
 
+void encolar_worker(list_struct_t *cola, worker_t *w, int index){
+    
+    pthread_mutex_lock(cola->mutex);
+    //esto cambia index al real index del ultimo elemento, ya que list_add_in_index -1 no lo pone al final, vaya a saber quien porque. La documentacion de list.h no explica esto
+    if (index == -1){
+        if (list_is_empty(cola->lista)){
+            index = 0;
+        }else{
+            worker_t * w_aux;
+            t_list_iterator *iterator = list_iterator_create(cola->lista);
+            while(list_iterator_has_next(iterator)){
+                w_aux = list_iterator_next(iterator);
+            }
+            index = list_iterator_index(iterator)+1;
+            list_iterator_destroy(iterator);
+        }
+    }
+    
+    
+    list_add_in_index(cola->lista, index, w);
+    pthread_mutex_unlock(cola->mutex);
+    sem_post(cola->sem);
+    return;
+}
+void encolar_query(list_struct_t *cola, query_t *q, int index){
+    
+    pthread_mutex_lock(cola->mutex);
+    //esto cambia index al real index del ultimo elemento, ya que list_add_in_index -1 no lo pone al final, vaya a saber quien porque. La documentacion de list.h no explica esto
+    if (index == -1){
+        if (list_is_empty(cola->lista)){
+            index = 0;
+        }else{
+            query_t * q_aux;
+            t_list_iterator *iterator = list_iterator_create(cola->lista);
+            while(list_iterator_has_next(iterator)){
+                q_aux = list_iterator_next(iterator);
+            }
+            index = list_iterator_index(iterator)+1;
+            list_iterator_destroy(iterator);
+        }
+    }
+    
+    
+    list_add_in_index(cola->lista, index, q);
+    pthread_mutex_unlock(cola->mutex);
+    sem_post(cola->sem);
+    return;
+}
+worker_t *desencolar_worker(list_struct_t *cola, int index){
+    pthread_mutex_lock(cola->mutex);
+    worker_t *w = list_remove(cola->lista, index);
+    pthread_mutex_unlock(cola->mutex);
+    return w;
+}
+query_t *desencolar_query(list_struct_t *cola, int index){
+    pthread_mutex_lock(cola->mutex);
+    worker_t *q = list_remove(cola->lista, index);
+    pthread_mutex_unlock(cola->mutex);
+    return q;
+}
 
 // ENUNCIADO FIFO:
 // Las ejecuciones de las Queries se irán asignando a cada Worker por orden de llegada.
@@ -245,18 +327,24 @@ void planificador_fifo() {
         sem_wait(cola_ready_queries->sem);
 
         // saco el primero de cada cola
-        pthread_mutex_lock(workers_libres->mutex);
-        worker_t *w = list_remove(workers_libres->lista, 0);
-        pthread_mutex_unlock(workers_libres->mutex);
-
-        pthread_mutex_lock(cola_ready_queries->mutex);
-        query_t *q = list_remove(cola_ready_queries->lista, 0);
-        pthread_mutex_unlock(cola_ready_queries->mutex);
+        worker_t *w = desencolar_worker(workers_libres,0);
+        query_t *q = desencolar_query(cola_ready_queries,0);
 
         if (w == NULL || q == NULL) {
             // si no hay elementos, sigo
             continue;
         }
+
+        /*
+        NOTA: creo que lo mejor es levantar un thread por cada par de worker query que se ejecute, osea que el codigo de abajo correria dentro de esa funcion de thread.
+        
+        -Thread principal de planificador       (asigna workers cuando llegan queries)
+        \-thread de worker                      (con su query asignado)
+        \-otro thread de worker                 (con su query asignado)
+
+        El thread del worker queda esperando una respuesta del worker. En caso de que haya desalojo se le envia un paquete al worker que atiende asincronicamente,
+        luego en el thread de worker atajamos el motivo de devolucion. Liberamos el worker y ponemos el query en la lista de ready o lo finalizamos
+        */
 
         // envio la asignacion al Worker: path + id_query
         t_paquete *p = crear_paquete(PARAMETROS_QUERY);
