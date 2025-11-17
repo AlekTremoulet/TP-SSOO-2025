@@ -38,8 +38,6 @@ void *conexion_cliente_master(void *args){
 	{
 		socket_master = crear_conexion(ip_master, puerto_master);
 		sleep(1);
-        log_debug(logger,"Intentando conectar a MASTER");        
-        
 	}while(socket_master == -1);
 
     log_info(logger, "Conexión al Master exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master);
@@ -49,17 +47,36 @@ void *conexion_cliente_master(void *args){
     agregar_a_paquete(paquete_send, parametros_a_enviar.archivo, strlen(parametros_a_enviar.archivo) + 1);
     agregar_a_paquete(paquete_send, &(parametros_a_enviar.prioridad), sizeof(int));
     enviar_paquete(paquete_send, socket_master);
-    
-    //Esperando a master que le avise que terminó 
-    protocolo_socket COD_OP = recibir_paquete_ok(socket_master);
 
-    if (COD_OP == OK){
-        log_info(logger, "Lectura realizada: Archivo <File:Tag>, contenido: <CONTENIDO>");
-        log_info(logger, "Query Finalizada - <%s>","OK");
-    } else {
-        log_info(logger, "Query Finalizada - <%s>","ERROR");
-    };
+    recibir_paquete_ok(socket_master);
     
+    while(1){
+        
+        protocolo_socket cod_op = recibir_operacion(socket_master);
+        t_list * paquete_recv;
+
+        switch(cod_op){
+            case QUERY_FINALIZACION:
+                paquete_recv = recibir_paquete(socket_master);
+                char * motivo = list_remove(paquete_recv, 0);
+                log_info(logger, "## Query Finalizada - <%s>", motivo);
+                return NULL;
+
+            case QUERY_LECTURA:
+                paquete_recv = recibir_paquete(socket_master);
+                char * file_tag = list_remove(paquete_recv, 0);
+                char * contenido = list_remove(paquete_recv, 0);
+                log_info(logger, "## Lectura realizada: File <%s>, contenido: <%s>", file_tag, contenido);
+                break;
+
+            default:
+                log_error(logger, "parametro desconocido recibido desde Master: %d", cod_op);
+                return NULL;
+
+        }
+
+        
+    }    
 
     return (void *)EXIT_SUCCESS;
 }

@@ -13,7 +13,11 @@ extern int id_query_actual;
 
 int main(int argc, char* argv[]);
 void levantarConfig(char *args);
-void* server_mh(void *args);
+void aumentar_nivel_multiprocesamiento();
+void disminuir_nivel_multiprocesamiento();
+int obtener_nivel_multiprocesamiento();
+void inicializarEstructurasMaster();
+void *server_mh(void *args);
 void *handler_cliente(void *arg);
 void planificador_fifo();
 void planificador_prioridades();

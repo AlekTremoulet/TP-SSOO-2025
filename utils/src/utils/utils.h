@@ -41,6 +41,8 @@ enum protocolo_socket
     OK,
 /*nuevas*/
     PARAMETROS_QUERY,
+    QUERY_FINALIZACION,
+    QUERY_LECTURA,
     PARAMETROS_WORKER,
     DEVOLUCION_QUERY,
     DEVOLUCION_WORKER,

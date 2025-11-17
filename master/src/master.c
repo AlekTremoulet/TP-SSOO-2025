@@ -5,6 +5,9 @@ t_config *config = NULL;
 t_log_level current_log_level;
 char *puerto = NULL;
 
+pthread_mutex_t * mutex_nivel_multiprocesamiento;
+int nivel_multiprocesamiento;
+
 char * algo_planificacion;
 
 int id_query_actual;
@@ -36,6 +39,8 @@ int main(int argc, char* argv[]) {
 
     
     levantarConfig(argv[argc-1]);
+
+    inicializarListasMaster();
 
     // FIFO
     pthread_create(&tid_planificador, NULL, planificador, NULL);
@@ -78,6 +83,31 @@ void levantarConfig(char *args){
 
     pthread_mutex_init(&m_id, NULL);
 
+}
+
+void inicializarEstructurasMaster(){
+    cola_ready_queries = inicializarLista();
+    workers_libres = inicializarLista();
+    mutex_nivel_multiprocesamiento = inicializarMutex();
+}
+
+void aumentar_nivel_multiprocesamiento(){
+    pthread_mutex_lock(mutex_nivel_multiprocesamiento);
+    nivel_multiprocesamiento++;
+    pthread_mutex_unlock(mutex_nivel_multiprocesamiento);
+}
+
+void disminuir_nivel_multiprocesamiento(){
+    pthread_mutex_lock(mutex_nivel_multiprocesamiento);
+    nivel_multiprocesamiento--;
+    pthread_mutex_unlock(mutex_nivel_multiprocesamiento);
+}
+int obtener_nivel_multiprocesamiento(){
+    pthread_mutex_lock(mutex_nivel_multiprocesamiento);
+    int return_value = nivel_multiprocesamiento;
+    pthread_mutex_unlock(mutex_nivel_multiprocesamiento);
+
+    return return_value;
 }
 
 void *server_mh(void *args) { // Server Multi-hilo
@@ -126,8 +156,8 @@ void *handler_cliente(void *arg) {
             pthread_mutex_unlock(&m_id);
 
             log_info(logger,
-                "Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <CANTIDAD>",
-                archivo_recv, prioridad, id_asignado);
+                "## Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <CANTIDAD>",
+                archivo_recv, prioridad, id_asignado, nivel_multiprocesamiento);
 
             enviar_paquete_ok(socket_nuevo);
 
@@ -144,6 +174,8 @@ void *handler_cliente(void *arg) {
             pthread_mutex_unlock(cola_ready_queries->mutex);
             sem_post(cola_ready_queries->sem);
             // FIFO
+
+            aumentar_nivel_multiprocesamiento();
 
             // libero lo deserializado (archivo_recv y prioridad_ptr)
             list_destroy_and_destroy_elements(paquete_recv, free);
