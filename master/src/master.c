@@ -14,18 +14,6 @@ char * algo_planificacion;
 
 int id_query_actual;
 
-// estructuras FIFO
-typedef struct {
-    int id_query;
-    int prioridad;
-    char *archivo;   // copia del path que manda el Query (uso strdup)
-    int socket_qc;   // socket del Query para avisarle el final
-} query_t;
-
-typedef struct {
-    int id;
-    int socket_worker;   // socket del Worker para mandarle la tarea al Worker: path + id_query
-} worker_t;
 
 // colas thread-safe
 list_struct_t *cola_ready_queries;  // elementos: query_t*
@@ -219,7 +207,7 @@ void *handler_cliente(void *arg) {
             w->id            = worker_id;
             w->socket_worker = socket_nuevo;       // guardo la conexion al worker
 
-            encolar_query(workers_libres, w, -1);
+            encolar_worker(workers_libres, w, -1);
             // FIFO
 
             aumentar_cantidad_workers();
@@ -308,7 +296,7 @@ worker_t *desencolar_worker(list_struct_t *cola, int index){
 }
 query_t *desencolar_query(list_struct_t *cola, int index){
     pthread_mutex_lock(cola->mutex);
-    worker_t *q = list_remove(cola->lista, index);
+    query_t *q = list_remove(cola->lista, index);
     pthread_mutex_unlock(cola->mutex);
     return q;
 }

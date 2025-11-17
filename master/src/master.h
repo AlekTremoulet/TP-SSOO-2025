@@ -11,6 +11,20 @@ extern t_log_level current_log_level;
 extern char * puerto;
 extern int id_query_actual;
 
+
+// estructuras FIFO
+typedef struct {
+    int id_query;
+    int prioridad;
+    char *archivo;   // copia del path que manda el Query (uso strdup)
+    int socket_qc;   // socket del Query para avisarle el final
+} query_t;
+
+typedef struct {
+    int id;
+    int socket_worker;   // socket del Worker para mandarle la tarea al Worker: path + id_query
+} worker_t;
+
 int main(int argc, char* argv[]);
 void levantarConfig(char *args);
 void aumentar_nivel_multiprocesamiento();
