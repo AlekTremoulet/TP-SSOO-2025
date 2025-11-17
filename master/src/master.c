@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     
     levantarConfig(argv[argc-1]);
 
-    inicializarListasMaster();
+    inicializarEstructurasMaster();
 
     // FIFO
     pthread_create(&tid_planificador, NULL, planificador, NULL);
@@ -155,9 +155,7 @@ void *handler_cliente(void *arg) {
             id_asignado = id_query_actual++;
             pthread_mutex_unlock(&m_id);
 
-            log_info(logger,
-                "## Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <CANTIDAD>",
-                archivo_recv, prioridad, id_asignado, nivel_multiprocesamiento);
+            
 
             enviar_paquete_ok(socket_nuevo);
 
@@ -168,14 +166,18 @@ void *handler_cliente(void *arg) {
             q->id_query  = id_asignado;
             q->socket_qc = socket_nuevo;           // guardo el socket del QC
 
+            aumentar_nivel_multiprocesamiento();
+
+            log_info(logger,
+                "## Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <%d>",
+                archivo_recv, prioridad, id_asignado, obtener_nivel_multiprocesamiento());
+
             // encolo al final -> FIFO
             pthread_mutex_lock(cola_ready_queries->mutex);
             list_add(cola_ready_queries->lista, q);
             pthread_mutex_unlock(cola_ready_queries->mutex);
             sem_post(cola_ready_queries->sem);
             // FIFO
-
-            aumentar_nivel_multiprocesamiento();
 
             // libero lo deserializado (archivo_recv y prioridad_ptr)
             list_destroy_and_destroy_elements(paquete_recv, free);
