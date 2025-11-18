@@ -46,6 +46,14 @@ enum protocolo_socket
     PARAMETROS_WORKER,
     DEVOLUCION_QUERY,
     DEVOLUCION_WORKER,
+    OP_CREATE,
+    OP_TRUNCATE,
+    OP_WRITE,
+    OP_READ,
+    OP_TAG,
+    OP_COMMIT,
+    OP_FLUSH,
+    OP_DELETE,
 /*nuevas*/
     NOMBRE_IO,
     DORMIR_IO,
@@ -84,6 +92,19 @@ enum protocolo_socket
 typedef enum protocolo_socket protocolo_socket;
 
 typedef enum {
+    CREATE,
+    TRUNCATE,
+    WRITE,
+    READ,
+    TAG,
+    COMMIT,
+    FLUSH,
+    DELETE,
+    END,
+    INVALID_INSTRUCTION
+} t_instruccion;
+
+typedef enum {
     READY_Q,
     EXECT_Q,
     EXIT_Q
@@ -106,17 +127,7 @@ typedef struct{
     int id;
     }parametros_worker;
 
-typedef enum{
-    CREATE,
-    TRUNCATE,
-    WRITE,
-    READ,
-    TAG,
-    COMMIT,
-    FLUSH,
-    DELETE,
-    END
-} t_instruccion;
+
 typedef struct
 {
 	int size;

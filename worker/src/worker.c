@@ -2,15 +2,7 @@
 
 
 
-char* archivo_config;
-int prioridad;
 
-char* ip_master;
-char* ip_storage;
-char* puerto_master;
-char* puerto_storage;
-int socket_master;
-int socket_storage;
 
 
 

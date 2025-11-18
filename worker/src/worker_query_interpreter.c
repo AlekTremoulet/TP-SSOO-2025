@@ -1,10 +1,9 @@
 #include <worker_query_interpreter.h>
 
-static struct {
-    int block_size = 0;
-    int mem_delay_ms = 0;
-} qi
 
+int block_size = 0;
+int mem_delay_ms = 0;
+extern int socket_storage;
 
 static t_instruccion obtener_instruccion(const char* texto) {
     if (strcmp(texto, "CREATE")   == 0) return CREATE;
@@ -63,8 +62,8 @@ static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** t
     if (long_nombre == 0 || long_tag == 0) 
         return false;
 
-    char* nombre = malloc(len_nombre + 1);
-    char* tag    = malloc(len_tag + 1);
+    char* nombre = malloc(long_nombre + 1);
+    char* tag    = malloc(long_tag + 1);
 
     if (!nombre || !tag) { 
         free(nombre); 
@@ -293,7 +292,8 @@ qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio, i
     eliminar_paquete(paquete);
 
     char* buffer = malloc(tamanio + 1);
-    memcpy(buffer, memoria->contenido + direccion_base, tamanio);
+    //comento esto pq no se de donde sale direccion base ni memoria, falta eso
+    //memcpy(buffer, memoria->contenido + direccion_base, tamanio);
     buffer[tamanio] = '\0';
 
     protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
