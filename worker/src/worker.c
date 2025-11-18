@@ -29,7 +29,7 @@ void inicializarWorker(){
     pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
     pthread_join(tid_conexion_master, NULL);
 
-    
+    loop_principal();
     
 }
 
