@@ -24,9 +24,12 @@ void inicializarWorker(){
     pthread_t tid_conexion_storage;
 
     pthread_create(&tid_conexion_storage, NULL, conexion_cliente_storage, NULL);
-    pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
     pthread_join(tid_conexion_storage, NULL);
+
+    pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
     pthread_join(tid_conexion_master, NULL);
+
+    
     
 }
 

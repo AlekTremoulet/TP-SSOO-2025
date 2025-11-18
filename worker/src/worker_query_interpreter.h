@@ -35,4 +35,6 @@ qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id);
 static qi_status_t exec_CREATE(int qid, char* cadena);
 static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out);
 
+void loop_principal();
+
 #endif

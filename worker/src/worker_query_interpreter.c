@@ -4,6 +4,7 @@
 int block_size = 0;
 int mem_delay_ms = 0;
 extern int socket_storage;
+extern int socket_master;
 
 static t_instruccion obtener_instruccion(const char* texto) {
     if (strcmp(texto, "CREATE")   == 0) return CREATE;
@@ -161,6 +162,43 @@ qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int 
     free(archivo);
     free(tag);
     return result;
+}
+
+void loop_principal(){
+    protocolo_socket cod_op;
+
+    while(1){
+         cod_op = recibir_operacion(socket_master);
+
+        t_list * paquete_recv;
+
+        switch (cod_op)
+        {
+        case EXEC_QUERY:
+            paquete_recv = recibir_paquete(socket_master);
+            //hay que crear una global o guardarlo en algun lado
+            int query_id = *(int *) list_remove(paquete_recv, 0);
+            char * query_path = list_remove(paquete_recv, 0);
+
+            ejecutar_query(query_id, query_path);
+
+            break;
+        
+        case QUERY_FINALIZACION:
+
+            //retorna ok
+
+            break;
+
+        case DESALOJO:
+
+            //RETORNA EL PC
+
+            break;
+        }
+    }
+
+   
 }
 
 void ejecutar_query(const char* path_query, int query_id) {
