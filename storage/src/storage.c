@@ -1,4 +1,5 @@
 #include <storage.h>
+#include <operaciones.h>
 
 int main(int argc, char* argv[]) {
     pthread_t tid_server_mh_worker;
@@ -70,20 +71,92 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
     protocolo_socket cod_op;
     t_list *paquete_recv;
     int socket_nuevo;
+    char* archivo;
+    char* tag;
+    int query_id;
+    int* tamanio;
+    int* dir_base;
     parametros_worker parametros_recibidos_worker;
 
     while((socket_nuevo = esperar_cliente(server))){
-        
-        cod_op = recibir_operacion(socket_nuevo);
-        if(cod_op != PARAMETROS_WORKER){
-            log_error(logger, "Se recibio un protocolo inesperado de WORKER");
-            return (void *)EXIT_SUCCESS;
-            }
-        paquete_recv = recibir_paquete(socket_nuevo);
-        int* id_ptr = list_remove(paquete_recv, 0);
-        parametros_recibidos_worker.id = *id_ptr;
+
         log_info(logger, "Se conecta un Worker con Id: <%d> ",parametros_recibidos_worker.id);
-        enviar_paquete_ok(socket_nuevo);
+        cod_op = recibir_operacion(socket_nuevo);
+        switch (cod_op)
+        {
+        case OP_CREATE:
+
+            paquete_recv = recibir_paquete(socket_nuevo);
+            archivo = list_remove(paquete_recv, 0); 
+            tag = list_remove(paquete_recv, 0); 
+            query_id = list_remove(paquete_recv, 0);
+            Crear_tag(archivo,tag);
+            enviar_paquete_ok(socket_nuevo);
+            break;
+        case OP_TRUNCATE:
+            paquete_recv = recibir_paquete(socket_nuevo);
+            archivo = list_remove(paquete_recv, 0);
+            tag = list_remove(paquete_recv, 0);
+            tamanio = list_remove(paquete_recv, 0);
+            query_id = list_remove(paquete_recv, 0);
+            Truncar_file(archivo,tag,tamanio,query_id);
+            enviar_paquete_ok(socket_nuevo);
+            break;
+        case OP_WRITE:
+            paquete_recv = recibir_paquete(socket_nuevo);
+            archivo = list_remove(paquete_recv, 0);
+            tag = list_remove(paquete_recv, 0);
+            int* dir_base = list_remove(paquete_recv, 0);
+            char* contenido = list_remove(paquete_recv, 0);
+            query_id = list_remove(paquete_recv, 0);
+            Escrbir_bloque(archivo,tag,dir_base,contenido,query_id);
+            enviar_paquete_ok(socket_nuevo);
+            break;
+        case OP_READ:
+            paquete_recv = recibir_paquete(socket_nuevo);
+            archivo = list_remove(paquete_recv, 0);
+            tag = list_remove(paquete_recv, 0);
+            dir_base = list_remove(paquete_recv, 0);
+            tamanio = list_remove(paquete_recv, 0);
+            query_id = list_remove(paquete_recv, 0);
+            Leer_bloque(archivo,tag,dir_base,tamanio,query_id);
+            enviar_paquete_ok(socket_nuevo);
+            break;
+/*        case OP_TAG:
+            paquete_recv = recibir_paquete(socket_nuevo);
+            int* id_worker = list_remove(paquete_recv, 0);
+            parametros_recibidos_worker.id = *id_worker;
+            //();
+            enviar_paquete_ok(socket_nuevo);
+            break;
+        case OP_COMMIT:
+            paquete_recv = recibir_paquete(socket_nuevo);
+            int* id_worker = list_remove(paquete_recv, 0);
+            parametros_recibidos_worker.id = *id_worker;
+            Commit_tag();
+            enviar_paquete_ok(socket_nuevo);
+            break;
+        case OP_FLUSH:
+            paquete_recv = recibir_paquete(socket_nuevo);
+            int* id_worker = list_remove(paquete_recv, 0);
+            parametros_recibidos_worker.id = *id_worker;
+            //();
+            enviar_paquete_ok(socket_nuevo);
+            break;
+        case OP_DELETE:
+            paquete_recv = recibir_paquete(socket_nuevo);
+            int* id_worker = list_remove(paquete_recv, 0);
+            parametros_recibidos_worker.id = *id_worker;
+            Eliminar_tag();
+            enviar_paquete_ok(socket_nuevo);
+            break;
+  */
+        default:
+            log_error(logger, "Se recibio un protocolo inesperado de WORKER");
+            return (void *)EXIT_FAILURE;
+            break;
+        }
+
            
     }
     return (void *)EXIT_SUCCESS;
