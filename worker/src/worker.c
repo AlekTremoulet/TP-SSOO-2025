@@ -1,12 +1,5 @@
 #include <worker.h>
 
-
-
-
-
-
-
-
 int main(int argc, char* argv[]) {
 
     if (argc < 3){
@@ -73,15 +66,6 @@ void *conexion_cliente_master(void *args){
     agregar_a_paquete(paquete_send, &(parametros_a_enviar.id), sizeof(int));
     enviar_paquete(paquete_send, socket_master);
     
-    //Esperando a master que le avise que terminó 
-    protocolo_socket COD_OP = recibir_paquete_ok(socket_master);
-
-    if (COD_OP == OK){
-        log_info(logger, "Worker Finalizada - <%s>","OK");
-    } else {
-        log_info(logger, "Worker Finalizada - <%s>","ERROR");
-    };
-    
     return (void *)EXIT_SUCCESS;
 }
 
@@ -97,18 +81,6 @@ void *conexion_cliente_storage (void *args){
     log_info(logger, "Conexión al Storage exitoso. IP: <%s>, Puerto: <%s>",ip_storage, puerto_storage);
     log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", parametros_a_enviar.id);
 
-    t_paquete *paquete_send = crear_paquete(PARAMETROS_WORKER);
-    agregar_a_paquete(paquete_send, &(parametros_a_enviar.id), sizeof(int));
-    enviar_paquete(paquete_send, socket_storage);
-    
-    //Esperando a worker que le avise que terminó 
-    protocolo_socket COD_OP = recibir_paquete_ok(socket_storage);
-
-    if (COD_OP == OK){
-        log_info(logger, "Worker Finalizada - <%s>","OK");
-    } else {
-        log_info(logger, "Worker Finalizada - <%s>","ERROR");
-    };
     
     return (void *)EXIT_SUCCESS; 
 }
