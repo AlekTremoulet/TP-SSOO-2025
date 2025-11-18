@@ -90,7 +90,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             archivo = list_remove(paquete_recv, 0); 
             tag = list_remove(paquete_recv, 0); 
             query_id = list_remove(paquete_recv, 0);
-            Crear_tag(archivo,tag);
+            Crear_file(archivo,tag);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_TRUNCATE:
@@ -122,35 +122,36 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             Leer_bloque(archivo,tag,dir_base,tamanio,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
-/*        case OP_TAG:
+        case OP_TAG:
             paquete_recv = recibir_paquete(socket_nuevo);
-            int* id_worker = list_remove(paquete_recv, 0);
-            parametros_recibidos_worker.id = *id_worker;
-            //();
+            char* arch_ori = list_remove(paquete_recv, 0);
+            char* tag_ori = list_remove(paquete_recv, 0);
+            char* arch_dest = list_remove(paquete_recv, 0);
+            char* tag_dest = list_remove(paquete_recv, 0);
+            query_id = list_remove(paquete_recv, 0);
+            Copiar_tag(tag_ori,arch_dest,tag_ori,tag_dest);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_COMMIT:
             paquete_recv = recibir_paquete(socket_nuevo);
-            int* id_worker = list_remove(paquete_recv, 0);
-            parametros_recibidos_worker.id = *id_worker;
-            Commit_tag();
+            archivo = list_remove(paquete_recv, 0);
+            tag = list_remove(paquete_recv, 0);
+            query_id = list_remove(paquete_recv, 0);
+            Commit_tag(archivo,tag,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_FLUSH:
-            paquete_recv = recibir_paquete(socket_nuevo);
-            int* id_worker = list_remove(paquete_recv, 0);
-            parametros_recibidos_worker.id = *id_worker;
-            //();
+            //Que es esto? le paso un paquete ok pero ni idea q es ahre
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_DELETE:
             paquete_recv = recibir_paquete(socket_nuevo);
-            int* id_worker = list_remove(paquete_recv, 0);
-            parametros_recibidos_worker.id = *id_worker;
-            Eliminar_tag();
+            archivo = list_remove(paquete_recv, 0);
+            tag = list_remove(paquete_recv, 0);
+            query_id = list_remove(paquete_recv, 0);
+            Eliminar_tag(archivo,tag,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
-  */
         default:
             log_error(logger, "Se recibio un protocolo inesperado de WORKER");
             return (void *)EXIT_FAILURE;

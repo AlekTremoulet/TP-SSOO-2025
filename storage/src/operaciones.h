@@ -27,13 +27,13 @@ typedef enum {
 //Operaciones
 
 
-void Crear_tag(char* archivo,char* tag); 
+void Crear_file(char* archivo,char* tag); 
 void Truncar_file(char* archivo, char* tag, int tamanio, int query_id); 
 void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int query_id); 
 void Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query_id); 
-void Eliminar_tag(); 
-void Copiar_tag();
-void Commit_tag(); 
+void Eliminar_tag(char* archivo, char* tag, int query_id); 
+void Copiar_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino);
+void Commit_tag(char* archivo, char* tag, int query_id); 
 
 
 
