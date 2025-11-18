@@ -39,7 +39,7 @@ typedef struct {
 typedef struct {
     char * Estado;
     char * Blocks; 
-    char * Tamanno;
+    char * Tamanio;
 } t_bloque_fisico;
 
 

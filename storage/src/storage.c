@@ -19,6 +19,8 @@ int main(int argc, char* argv[]) {
     inicializar_hash();
     inicializar_bloques_fisicos();
     inicializar_bloques_logicos();
+    Crear_file("archivo","tag");
+    Truncar_file("archivo","tag",10,1);    
     // Copiar_tag("/home/utnso/storage/files/initial_file","/home/utnso/storage/files/initial_file2");
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
@@ -85,7 +87,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
         switch (cod_op)
         {
         case OP_CREATE:
-
             paquete_recv = recibir_paquete(socket_nuevo);
             archivo = list_remove(paquete_recv, 0); 
             tag = list_remove(paquete_recv, 0); 
@@ -267,17 +268,31 @@ void inicializar_hash() {
 }
 
 char *escribir_en_hash(char *nombre_bloque) {
-    FILE * hash_file = fopen(path_hash, "ab+");
-    if (!hash_file) {
-        log_error(logger,"Error al abrir blocks_hash_index.config");
-        exit(EXIT_FAILURE);
+    t_config *hash_config = config_create(path_hash);
+
+    if (!hash_config) {
+        FILE *temp_file = fopen(path_hash, "w");
+        if (temp_file) {
+            fclose(temp_file);
+            hash_config = config_create(path_hash); 
+        }
+
+        if (!hash_config) { 
+            log_error(logger, "Error al crear/abrir blocks_hash_index.config en %s", path_hash);
+            exit(EXIT_FAILURE);
+        }
     }
+
     size_t longitud_bloque = strlen(nombre_bloque);
-    char *nombre_bloque_hash = crypto_md5(nombre_bloque, longitud_bloque);
-    nombre_bloque = nombre_bloque + 1; //Omitir el primer caracter
-    fprintf(hash_file, "%s=%s\n",nombre_bloque_hash,nombre_bloque);
-    fclose(hash_file);
-    return nombre_bloque_hash;
+    char *nombre_bloque_hash = crypto_md5(nombre_bloque, longitud_bloque); 
+    char *nombre_bloque_sin_prefijo = nombre_bloque + 1; 
+    config_set_value(hash_config, nombre_bloque_hash, nombre_bloque_sin_prefijo);
+
+    if (config_save(hash_config) == -1) {
+        log_error(logger, "Error al guardar los datos en blocks_hash_index.config");
+    }
+    config_destroy(hash_config);
+    return nombre_bloque_hash; 
 }
 
 char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) { //Operacion de crear archivo
@@ -305,18 +320,30 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) { //Operacio
     t_bloque_fisico Bloque_F; 
     Bloque_F.Estado = "WORK IN PROGRESS";
     Bloque_F.Blocks = "[]"; // getBlockesMetadata();
-    Bloque_F.Tamanno = "0"; // getTamannoMetadata();
+    Bloque_F.Tamanio = "0"; // getTamannoMetadata();
 
-    FILE * config_archivo_metadata = fopen(directorio_config_asociada, "wb+");
+    t_config *config_archivo_metadata = config_create(directorio_config_asociada);
     if (!config_archivo_metadata) {
-        log_error(logger,"Error al abrir el .config");
-        exit(EXIT_FAILURE);
-    }
-    fprintf(config_archivo_metadata, "ESTADO=%s\n",Bloque_F.Estado);
-    fprintf(config_archivo_metadata, "Blocks=%s\n",Bloque_F.Blocks);
-    fprintf(config_archivo_metadata, "Tamaño=%s\n",Bloque_F.Tamanno);
+        FILE *temp_file = fopen(directorio_config_asociada, "w");
+        if (temp_file) {
+            fclose(temp_file);
+            config_archivo_metadata = config_create(directorio_config_asociada); 
+        }
 
-    fclose(config_archivo_metadata);
+        if (!config_archivo_metadata) { 
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    config_set_value(config_archivo_metadata, "ESTADO", Bloque_F.Estado);
+    config_set_value(config_archivo_metadata, "Blocks", Bloque_F.Blocks);
+    config_set_value(config_archivo_metadata, "Tamanio", Bloque_F.Tamanio);
+
+    if (config_save(config_archivo_metadata) == -1) {
+        log_error(logger, "Error al guardar los datos en el .config: %s", directorio_config_asociada);
+    }
+    
+    
     char *dir_logical_blocks = malloc(strlen(directorio_tag) + strlen("/logical_blocks") + 1);
     sprintf(dir_logical_blocks, "%s/%s", directorio_tag,"logical_blocks");
     crear_directorio(dir_logical_blocks);

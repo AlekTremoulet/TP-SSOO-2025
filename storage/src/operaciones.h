@@ -23,7 +23,7 @@ typedef enum {
     Fuera_Limite
 } t_errores_Fs;
 
-
+extern char * dir_files;
 //Operaciones
 
 
