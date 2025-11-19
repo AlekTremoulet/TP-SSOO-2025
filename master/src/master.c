@@ -71,8 +71,8 @@ void levantarConfig(char *args){
     algo_planificacion = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
 
     // inicializo colas FIFO
-    cola_ready_queries = inicializarLista();
-    workers_libres     = inicializarLista();
+    //cola_ready_queries = inicializarLista();
+    //workers_libres     = inicializarLista();
 
     pthread_mutex_init(&m_id, NULL);
 
@@ -318,6 +318,9 @@ void planificador_fifo() {
         worker_t *w = desencolar_worker(workers_libres,0);
         query_t *q = desencolar_query(cola_ready_queries,0);
 
+        // marco al W como ocupado, cuando lo desencolo
+        //encolar_worker(workers_busy, w, -1);
+
         if (w == NULL || q == NULL) {
             // si no hay elementos, sigo
             continue;
@@ -356,17 +359,13 @@ void *hilo_worker_query(void *arg) {
     worker_t *w = dwq->worker;
     query_t  *q = dwq->query;
 
+    log_info(logger, "## Se envía la Query <%d> (<%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
+
     t_paquete *p = crear_paquete(PARAMETROS_QUERY);
     agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1); // envio path
     agregar_a_paquete(p, &(q->id_query), sizeof(int));        // envio id
     enviar_paquete(p, w->socket_worker);
     eliminar_paquete(p);
-
-    log_info(logger, "Worker empezo a ejecutar Query", w->id, q->id_query, q->archivo);
-
-    free(q->archivo);
-    free(q);
-    free(dwq);
 
     // respuesta del W
     protocolo_socket cod = recibir_operacion(w->socket_worker);
@@ -374,21 +373,31 @@ void *hilo_worker_query(void *arg) {
     switch (cod) {
 
         case DEVOLUCION_WORKER: {
-            // TO DO
-            log_info(logger, "Worker devolvio resultado para la Query", w->id, q->id_query);
+            // t_list* paquete = recibir_paquete(w->socket_worker); // TO DO
+          
+            log_info(logger, "## Se terminó la Query <%d> en el Worker <%d>", q->id_query, w->id);
+
+             // reencolar worker como libre
+            encolar_worker(workers_libres, w, -1);
+
+            // TO DO: avisar a Query Control por q->socket_qc (DEVOLUCION_QUERY)
             break;
         }
 
         case DESALOJO_WORKER: {
             // TO DO
-            log_info(logger, "Worker fue desalojado mientras ejecutaba la Query", w->id, q->id_query);
+            log_info(logger, "## Se desaloja la Query <%d> (<%d>) del Worker <%d> - Motivo: <PRIORIDAD>", q->id_query, q->prioridad, w->id);
             break;
         }
 
         default:
-            log_error(logger, "Worker devolvio un codigo inesperado", w->id, cod);
+            log_error(logger, "Worker <%d> devolvió un código inesperado <%d>", w->id, cod);
             break;
     }
+
+    free(q->archivo);
+    free(q);
+    free(dwq);
 
     // el worker no se libera, sigue existiendo, solo se reencola
     return NULL;
