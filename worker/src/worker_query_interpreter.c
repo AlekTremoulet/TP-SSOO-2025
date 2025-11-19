@@ -6,6 +6,10 @@ int mem_delay_ms = 0;
 extern int socket_storage;
 extern int socket_master;
 
+int program_counter;
+
+extern pthread_mutex_t * mutex_flag_desalojo;
+
 static t_instruccion obtener_instruccion(const char* texto) {
     if (strcmp(texto, "CREATE")   == 0) return CREATE;
     if (strcmp(texto, "TRUNCATE") == 0) return TRUNCATE;
@@ -163,9 +167,24 @@ qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int 
     free(tag);
     return result;
 }
+int obtener_desalojo_flag(){
+    pthread_mutex_lock(mutex_flag_desalojo);
+    int return_value = flag_desalojo;
+    pthread_mutex_unlock(mutex_flag_desalojo);
+
+    return return_value;
+}
+
+void setear_desalojo_flag(int value){
+    pthread_mutex_lock(mutex_flag_desalojo);
+    flag_desalojo = value;
+    pthread_mutex_unlock(mutex_flag_desalojo);
+}
 
 void loop_principal(){
     protocolo_socket cod_op;
+
+    mutex_flag_desalojo = inicializarMutex();
 
     while(1){
          cod_op = recibir_operacion(socket_master);
@@ -179,22 +198,27 @@ void loop_principal(){
             //hay que crear una global o guardarlo en algun lado
             int query_id = *(int *) list_remove(paquete_recv, 0);
             char * query_path = list_remove(paquete_recv, 0);
+            program_counter = *(int *) list_remove(paquete_recv, 0);
 
-            ejecutar_query(query_id, query_path);
+            //hay que modificar ejecutar query para que corra de a una linea, dandonos la oporturnidad de chequear si hay desalojo desde master
+            while(!obtener_desalojo_flag()){
+                ejecutar_query(query_path, query_id);
+            }if (obtener_desalojo_flag()){
+                //llamo a una funcion que atienda el desalojo, o escribir aca mismo. Hay que darle el PC a master
+                //seteo el flag en false
+                setear_desalojo_flag(false);
+                //sigo con mi vida
+            }
+            
 
             break;
         
         case QUERY_FINALIZACION:
 
-            //retorna ok
+            //retorna ok a master
 
             break;
 
-        case DESALOJO:
-
-            //RETORNA EL PC
-
-            break;
         }
     }
 
@@ -213,8 +237,8 @@ void ejecutar_query(const char* path_query, int query_id) {
     char* linea = NULL;
     size_t len = 0;
     size_t read;
-    int program_counter = 0;
 
+    //este while no deberia esta, asi solo lee una linea. El file read se puede hacer en otro lado (loop_principal()? y recorrer las lineas en un char* usando el program counter)
     while ((read = getline(&linea, &len, arch_inst)) != -1) {
         quitar_salto_de_linea(linea);
 

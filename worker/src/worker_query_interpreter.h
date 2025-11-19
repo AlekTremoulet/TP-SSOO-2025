@@ -16,6 +16,9 @@ typedef enum {
     QI_ERR_NO_HAY_ESPACIO
 } qi_status_t;
 
+extern int flag_desalojo;
+extern pthread_mutex_t * mutex_flag_desalojo;
+
 
 static t_instruccion obtener_instruccion(const char* texto);
 static inline void quitar_salto_de_linea(char* cadena);
@@ -36,5 +39,8 @@ static qi_status_t exec_CREATE(int qid, char* cadena);
 static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out);
 
 void loop_principal();
+
+int obtener_desalojo_flag();
+void setear_desalojo_flag(int value);
 
 #endif

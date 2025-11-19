@@ -22,12 +22,16 @@ void inicializarWorker(){
 
     pthread_t tid_conexion_master;
     pthread_t tid_conexion_storage;
+    pthread_t tid_desalojo_master;
 
     pthread_create(&tid_conexion_storage, NULL, conexion_cliente_storage, NULL);
     pthread_join(tid_conexion_storage, NULL);
 
     pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
     pthread_join(tid_conexion_master, NULL);
+
+    pthread_create(&tid_desalojo_master, NULL, desalojo_check, NULL);
+    pthread_detach(tid_desalojo_master);
 
     loop_principal();
     
@@ -42,6 +46,7 @@ void levantarConfig(char* archivo_config){
 
     ip_master = config_get_string_value(config, "IP_MASTER");
     puerto_master = config_get_string_value(config, "PUERTO_MASTER");
+    puerto_master_desalojo = config_get_string_value(config, "PUERTO_MASTER_DESALOJO");
 }
 void levantarStorage(){
     config = config_create("./worker.config");
@@ -51,6 +56,27 @@ void levantarStorage(){
     puerto_storage = config_get_string_value(config, "PUERTO_STORAGE");
 }
 
+
+void *desalojo_check(void * args){
+
+    while(1){
+        protocolo_socket cod_op = recibir_operacion(socket_desalojo);
+
+        switch (cod_op)
+        {
+        case DESALOJO:
+            setear_desalojo_flag(true);
+            break;
+        
+        default:
+            log_error(logger, "operacion desconocida en desalojo_check");
+            break;
+        }
+    }
+    
+    return (void *)EXIT_SUCCESS;
+
+}
 
 void *conexion_cliente_master(void *args){
     
@@ -64,6 +90,15 @@ void *conexion_cliente_master(void *args){
 
     log_info(logger, "Conexión al Master exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master);
     log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", parametros_a_enviar.id);
+
+    do
+	{
+		socket_desalojo = crear_conexion(ip_master, puerto_master_desalojo);
+		sleep(1);
+        
+	}while(socket_master == -1);
+
+    log_info(logger, "Conexión al Master-desalojo exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master_desalojo);
 
     t_paquete *paquete_send = crear_paquete(PARAMETROS_WORKER);
     agregar_a_paquete(paquete_send, &(parametros_a_enviar.id), sizeof(int));
