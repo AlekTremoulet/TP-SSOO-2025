@@ -361,6 +361,7 @@ void *hilo_worker_query(void *arg) {
 
     log_info(logger, "## Se envía la Query <%d> (<%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
 
+    // le mando al W el path + id_query
     t_paquete *p = crear_paquete(PARAMETROS_QUERY);
     agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1); // envio path
     agregar_a_paquete(p, &(q->id_query), sizeof(int));        // envio id
@@ -373,7 +374,11 @@ void *hilo_worker_query(void *arg) {
     switch (cod) {
 
         case DEVOLUCION_WORKER: {
-            // t_list* paquete = recibir_paquete(w->socket_worker); // TO DO
+
+            t_list *paquete = recibir_paquete(w->socket_worker);
+            if (paquete != NULL) {
+                list_destroy_and_destroy_elements(paquete, free);
+            }
           
             log_info(logger, "## Se terminó la Query <%d> en el Worker <%d>", q->id_query, w->id);
 
@@ -381,23 +386,45 @@ void *hilo_worker_query(void *arg) {
             encolar_worker(workers_libres, w, -1);
 
             // TO DO: avisar a Query Control por q->socket_qc (DEVOLUCION_QUERY)
+
+            free(q->archivo);
+            free(q);
+            free(dwq);
+
             break;
         }
 
         case DESALOJO_WORKER: {
-            // TO DO
+            
+            t_list *paquete = recibir_paquete(w->socket_worker);
+            if (paquete != NULL) {
+                list_destroy_and_destroy_elements(paquete, free);
+            }
+
             log_info(logger, "## Se desaloja la Query <%d> (<%d>) del Worker <%d> - Motivo: <PRIORIDAD>", q->id_query, q->prioridad, w->id);
+
+            // reencolo la query en READY para que vuelva a planificarse
+            encolar_query(cola_ready_queries, q, -1);
+
+            // reencolo el worker como libre
+            encolar_worker(workers_libres, w, -1);
+
+            free(dwq);
+
             break;
         }
 
         default:
             log_error(logger, "Worker <%d> devolvió un código inesperado <%d>", w->id, cod);
+            
+            free(q->archivo);
+            free(q);
+            free(dwq);
+
+            encolar_worker(workers_libres, w, -1);
+
             break;
     }
-
-    free(q->archivo);
-    free(q);
-    free(dwq);
 
     // el worker no se libera, sigue existiendo, solo se reencola
     return NULL;
