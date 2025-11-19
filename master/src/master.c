@@ -219,7 +219,7 @@ void *handler_cliente(void *arg) {
         }
 
         // resultado
-        case DEVOLUCION_WORKER: {
+        case WORKER_FINALIZACION: {
             // TODO: leer (id_query, status) del paquete
             // TODO: re-encolar este worker en workers_libres
             // TODO: buscar socket_qc por id_query y enviar DEVOLUCION_QUERY
@@ -373,7 +373,24 @@ void *hilo_worker_query(void *arg) {
 
     switch (cod) {
 
-        case DEVOLUCION_WORKER: {
+        case WORKER_LECTURA: {
+
+             t_list* paquete = recibir_paquete(w->socket_worker);
+
+            int *id_ptr = list_remove(paquete, 0);
+            int id_query = *id_ptr;
+
+            int *size_ptr = list_remove(paquete, 1);
+            int size = *size_ptr;
+
+            void *buffer = list_remove(paquete, 2);
+
+            log_info(logger, "## Se envía un mensaje de lectura de la Query <%d> en el Worker <%d> al Query Control", q->id_query, w->id);
+
+            break;
+        }
+
+        case WORKER_FINALIZACION: {
 
             t_list *paquete = recibir_paquete(w->socket_worker);
             if (paquete != NULL) {
@@ -382,10 +399,13 @@ void *hilo_worker_query(void *arg) {
           
             log_info(logger, "## Se terminó la Query <%d> en el Worker <%d>", q->id_query, w->id);
 
+             // termino una query
+            disminuir_nivel_multiprocesamiento();
+
              // reencolar worker como libre
             encolar_worker(workers_libres, w, -1);
 
-            // TO DO: avisar a Query Control por q->socket_qc (DEVOLUCION_QUERY)
+            // TO DO: avisar a query_control por q->socket_qc (DEVOLUCION_QUERY)
 
             free(q->archivo);
             free(q);
@@ -394,7 +414,7 @@ void *hilo_worker_query(void *arg) {
             break;
         }
 
-        case DESALOJO_WORKER: {
+        case WORKER_DESALOJO: {
             
             t_list *paquete = recibir_paquete(w->socket_worker);
             if (paquete != NULL) {
@@ -412,7 +432,7 @@ void *hilo_worker_query(void *arg) {
             free(dwq);
 
             break;
-        }
+        }   
 
         default:
             log_error(logger, "Worker <%d> devolvió un código inesperado <%d>", w->id, cod);
@@ -426,7 +446,7 @@ void *hilo_worker_query(void *arg) {
             break;
     }
 
-    // el worker no se libera, sigue existiendo, solo se reencola
+    // el worker no se libera, solo se reencola
     return NULL;
 }
 
@@ -435,8 +455,3 @@ void planificador_prioridades(){
     log_error(logger, "El planificador de prioridades no esta definido todavia");
     return;
 }
-
-// TODO: manejar DEVOLUCION_WORKER (id_query, status)
-//   - re-encolar al worker en workers_libres
-//   - avisarle al Query por socket_qc con DEVOLUCION_QUERY(status)
-//   - IMPORTANTE: hay que guardar una tabla id_query -> socket_qc para saber xq socket responder a cada query cuando el Worker termine
