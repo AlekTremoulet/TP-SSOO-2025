@@ -25,6 +25,12 @@ typedef struct {
     int socket_worker;   // socket del Worker para mandarle la tarea al Worker: path + id_query
 } worker_t;
 
+// los datos que necesito pasarle al thread
+typedef struct {
+    worker_t *worker;
+    query_t  *query;
+} datos_worker_query_t;
+
 int main(int argc, char* argv[]);
 void levantarConfig(char *args);
 void aumentar_nivel_multiprocesamiento();
@@ -43,5 +49,6 @@ query_t *desencolar_query(list_struct_t *cola, int index);
 void planificador_fifo();
 void planificador_prioridades();
 void *planificador(void * args);
+void *hilo_worker_query(void *arg);
 
 #endif

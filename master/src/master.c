@@ -334,24 +334,66 @@ void planificador_fifo() {
         luego en el thread de worker atajamos el motivo de devolucion. Liberamos el worker y ponemos el query en la lista de ready o lo finalizamos
         */
 
-        // envio la asignacion al Worker: path + id_query
-        t_paquete *p = crear_paquete(PARAMETROS_QUERY);
-        agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1);
-        agregar_a_paquete(p, &(q->id_query), sizeof(int));
-        enviar_paquete(p, w->socket_worker);
-        eliminar_paquete(p);
+         // estructura que voy a pasarle al thread
+        datos_worker_query_t *dwq = malloc(sizeof(datos_worker_query_t));
+        dwq->worker = w;
+        dwq->query  = q;
 
-        log_info(logger, "FIFO: Asignada Query id <%d> al Worker id <%d>",
-                 q->id_query, w->id);
+        // creo el thread para worker+query
+        pthread_t th_wq;
+        pthread_create(&th_wq, NULL, hilo_worker_query, dwq);
+        pthread_detach(th_wq);
 
-        free(w);
-        free(q->archivo);
-        free(q);
-
-        // TODO: el worker queda ocupado hasta implementar la devolucion
+        // el planificador no se queda esperando
     }
     return;
 }
+
+void *hilo_worker_query(void *arg) {
+
+    // recibo el paquete de datos
+    datos_worker_query_t *dwq = (datos_worker_query_t *)arg;
+    worker_t *w = dwq->worker;
+    query_t  *q = dwq->query;
+
+    t_paquete *p = crear_paquete(PARAMETROS_QUERY);
+    agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1); // envio path
+    agregar_a_paquete(p, &(q->id_query), sizeof(int));        // envio id
+    enviar_paquete(p, w->socket_worker);
+    eliminar_paquete(p);
+
+    log_info(logger, "Worker empezo a ejecutar Query", w->id, q->id_query, q->archivo);
+
+    free(q->archivo);
+    free(q);
+    free(dwq);
+
+    // respuesta del W
+    protocolo_socket cod = recibir_operacion(w->socket_worker);
+
+    switch (cod) {
+
+        case DEVOLUCION_WORKER: {
+            // TO DO
+            log_info(logger, "Worker devolvio resultado para la Query", w->id, q->id_query);
+            break;
+        }
+
+        case DESALOJO_WORKER: {
+            // TO DO
+            log_info(logger, "Worker fue desalojado mientras ejecutaba la Query", w->id, q->id_query);
+            break;
+        }
+
+        default:
+            log_error(logger, "Worker devolvio un codigo inesperado", w->id, cod);
+            break;
+    }
+
+    // el worker no se libera, sigue existiendo, solo se reencola
+    return NULL;
+}
+
 
 void planificador_prioridades(){
     log_error(logger, "El planificador de prioridades no esta definido todavia");
