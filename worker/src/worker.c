@@ -46,7 +46,16 @@ void levantarConfig(char* archivo_config){
 
     ip_master = config_get_string_value(config, "IP_MASTER");
     puerto_master = config_get_string_value(config, "PUERTO_MASTER");
+
     puerto_master_desalojo = config_get_string_value(config, "PUERTO_MASTER_DESALOJO");
+
+    Path_Queries = config_get_string_value(config, "PATH_SCRIPTS");
+    Tam_memoria = config_get_int_value(config, "TAM_MEMORIA");
+    Retardo_reemplazo = config_get_int_value(config, "RETARDO_MEMORIA");
+    Algorit_Remplazo = config_get_string_value(config, "ALGORITMO_REEMPLAZO");
+
+    init_paginas();
+
 }
 void levantarStorage(){
     config = config_create("./worker.config");
@@ -54,6 +63,7 @@ void levantarStorage(){
     current_log_level = log_level_from_string(value);
     ip_storage = config_get_string_value(config, "IP_STORAGE");
     puerto_storage = config_get_string_value(config, "PUERTO_STORAGE");
+
 }
 
 

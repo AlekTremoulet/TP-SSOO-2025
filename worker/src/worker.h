@@ -20,6 +20,12 @@ int socket_master;
 int socket_desalojo;
 int socket_storage;
 
+char * Path_Queries;
+
+int Tam_memoria;
+int Retardo_reemplazo;
+char * Algorit_Remplazo;
+
 pthread_mutex_t * mutex_flag_desalojo;
 int flag_desalojo;
 
