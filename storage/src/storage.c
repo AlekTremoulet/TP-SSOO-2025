@@ -19,9 +19,9 @@ int main(int argc, char* argv[]) {
     inicializar_hash();
     inicializar_bloques_fisicos();
     inicializar_bloques_logicos();
-    Crear_file("archivo","tag");
+    Crear_file("archivo","tag",1);
     Truncar_file("archivo","tag",10,1);    
-    // Copiar_tag("/home/utnso/storage/files/initial_file","/home/utnso/storage/files/initial_file2");
+    // Crear_tag("/home/utnso/storage/files/initial_file","/home/utnso/storage/files/initial_file2");
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -91,7 +91,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             archivo = list_remove(paquete_recv, 0); 
             tag = list_remove(paquete_recv, 0); 
             query_id = list_remove(paquete_recv, 0);
-            Crear_file(archivo,tag);
+            Crear_file(archivo,tag,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_TRUNCATE:
@@ -130,7 +130,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             char* arch_dest = list_remove(paquete_recv, 0);
             char* tag_dest = list_remove(paquete_recv, 0);
             query_id = list_remove(paquete_recv, 0);
-            Copiar_tag(tag_ori,arch_dest,tag_ori,tag_dest);
+            Crear_tag(tag_ori,arch_dest,tag_ori,tag_dest,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_COMMIT:
