@@ -153,6 +153,12 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             Eliminar_tag(archivo,tag,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
+        case PARAMETROS_STORAGE:
+                t_paquete* paquete_send = crear_paquete(PARAMETROS_STORAGE);
+                agregar_a_paquete(paquete_send,&tam_bloque,sizeof(int));
+                enviar_paquete(paquete_send,socket_nuevo);
+                eliminar_paquete(paquete_send);
+            break;
         default:
             log_error(logger, "Se recibio un protocolo inesperado de WORKER");
             return (void *)EXIT_FAILURE;

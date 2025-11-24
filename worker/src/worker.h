@@ -23,6 +23,9 @@ int socket_storage;
 char * Path_Queries;
 
 int Tam_memoria;
+
+int tam_pagina = 1; //Del storage BLOCK_SIZE
+
 int Retardo_reemplazo;
 char * Algorit_Remplazo;
 
@@ -38,5 +41,8 @@ void *conexion_cliente_storage(void *args);
 
 
 void *desalojo_check(void *args);
+
+void parametros_storage(int socket_storage);
+
 
 #endif

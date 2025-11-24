@@ -25,7 +25,7 @@ int Clock_M();
 int Lru();
 int Especio_pagina();
 
-int tam_pagina = 128; //Del storage BLOCK_SIZE
+extern int tam_pagina; //Del storage BLOCK_SIZE
 t_pagina * Mem_paginas;
 int cant_paginas = 0;
 int tiempo = 0; 

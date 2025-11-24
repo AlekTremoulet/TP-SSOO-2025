@@ -54,7 +54,7 @@ void levantarConfig(char* archivo_config){
     Retardo_reemplazo = config_get_int_value(config, "RETARDO_MEMORIA");
     Algorit_Remplazo = config_get_string_value(config, "ALGORITMO_REEMPLAZO");
 
-    init_paginas();
+    
 
 }
 void levantarStorage(){
@@ -129,6 +129,23 @@ void *conexion_cliente_storage (void *args){
     log_info(logger, "Conexión al Storage exitoso. IP: <%s>, Puerto: <%s>",ip_storage, puerto_storage);
     log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", parametros_a_enviar.id);
 
+    parametros_storage(socket_storage);
     
     return (void *)EXIT_SUCCESS; 
 }
+
+
+void parametros_storage(int socket_storage){
+    t_paquete *paquete_send = crear_paquete(PARAMETROS_STORAGE);
+    enviar_paquete(paquete_send, socket_storage);
+    eliminar_paquete(paquete_send);
+
+    protocolo_socket cod_op = recibir_operacion(socket_storage);
+    if (cod_op == PARAMETROS_STORAGE){
+        t_list *paquete_recv = recibir_paquete(socket_storage);
+        tam_pagina =  *(int*) list_remove(paquete_recv, 0); 
+        log_debug(logger, "Parametros Storage:  <%d>",tam_pagina);
+
+        init_paginas();
+    }
+};
