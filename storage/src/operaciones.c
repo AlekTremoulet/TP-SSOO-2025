@@ -23,7 +23,18 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id){
     log_info(logger,"<%d> - File Truncado <%s>:<%s> - Tamaño: <%d>",query_id,archivo,tag,tamanio);
 }; 
 void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int query_id){
-    log_info(logger,"<%d> - Bloque Lógico Escrito <%s>:<%s> - Número de Bloque: <%d>",query_id,archivo,tag,dir_base);//aca no va dir_base si no que se saca el Numero de bloque
+    int Siguiente_bit_libre = espacio_disponible(bitmap);
+    if (Siguiente_bit_libre == -1 )
+    {
+        log_error(logger,"Error, Espacio Insuficiente");
+    }
+    else
+    {
+        buscar_y_ocupar_siguiente_bit_libre(Siguiente_bit_libre);
+        inicializar_bloque_fisico(Siguiente_bit_libre);
+        log_info(logger,"<%d> - Bloque Lógico Escrito <%s>:<%s> - Número de Bloque: <%d>",query_id,archivo,tag,Siguiente_bit_libre);
+    }
+
 }; 
 void Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query_id){
     log_info(logger,"<%d> - Bloque Lógico Leído <%s>:<%s> - Número de Bloque: <%d>",query_id,archivo,tag,tamanio);//aca no va tamanio si no que se saca el Numero de bloque

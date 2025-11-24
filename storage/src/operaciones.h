@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <commons/crypto.h>
+#include <commons/bitarray.h>
 
 
 typedef enum {
@@ -24,6 +25,7 @@ typedef enum {
 } t_errores_Fs;
 
 extern char * dir_files;
+extern t_bitarray* bitmap;
 //Operaciones
 
 

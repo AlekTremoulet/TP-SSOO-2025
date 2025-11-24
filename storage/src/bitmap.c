@@ -146,9 +146,9 @@ char *cargar_ruta(char *ruta_al_archivo){
     return path_creado;
 }
 
-void buscar_bit_libre(){
-    if (espacio_disponible(bitmap) !=-1){
-        ocupar_espacio_bitmap(espacio_disponible(bitmap));
+void buscar_y_ocupar_siguiente_bit_libre(int Siguiente_bit_libre){
+    if (Siguiente_bit_libre !=-1){
+        ocupar_espacio_bitmap(Siguiente_bit_libre);
     } else{
         ocupar_espacio_bitmap(libres);
         libres++;

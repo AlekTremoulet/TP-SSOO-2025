@@ -15,7 +15,7 @@ extern int tam_fs;
 extern int tam_bloque;
 extern int block_count;
 
-static t_bitarray* bitmap;
+t_bitarray* bitmap;
 static FILE* bitmap_file;
 extern t_log *logger;
 
@@ -39,6 +39,6 @@ int ocupar_espacio_bitmap(int offset_bit);
 int liberar_espacio_bitmap(int offset_bit);
 void destruir_bitmap();
 char *cargar_ruta(char *ruta_al_archivo);
-void buscar_bit_libre();
+void buscar_y_ocupar_siguiente_bit_libre();
 
 #endif

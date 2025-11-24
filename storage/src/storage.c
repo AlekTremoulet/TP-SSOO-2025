@@ -17,10 +17,11 @@ int main(int argc, char* argv[]) {
     levantarConfigSuperblock();
     inicializar_bitmap();
     inicializar_hash();
-    inicializar_bloques_fisicos();
     inicializar_bloques_logicos();
     Crear_file("archivo","tag",1);
     Truncar_file("archivo","tag",10,1);    
+    Escrbir_bloque("archivo","tag",1,"hola",3);
+    Escrbir_bloque("archivo","tag",1,"hola",3);
     // Crear_tag("/home/utnso/storage/files/initial_file","/home/utnso/storage/files/initial_file2");
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
@@ -142,7 +143,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_FLUSH:
-            //Que es esto? le paso un paquete ok pero ni idea q es ahre
+            //cuando este listo memoria vemos esto
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_DELETE:
@@ -357,21 +358,18 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) { //Operacio
     return dir_logical_blocks;
 }
 
-void inicializar_bloques_fisicos(){
-    for (int i = 0; i < block_count; i++) {
-        char *nombre_archivo = malloc(20);
-        sprintf(nombre_archivo, "/block%04d.dat", i);
+void inicializar_bloque_fisico(int numero_bloque){
+    char *nombre_archivo = malloc(20);
+    sprintf(nombre_archivo, "/block%04d.dat", numero_bloque);
 
-        char *path_block_dat = cargar_archivo(dir_physical_blocks, nombre_archivo);;
-        FILE *block_dat_file = fopen(path_block_dat, "wb+");
-        if (!block_dat_file) {
-            log_error(logger,"Error al abrir blocks_hash_index.config");
-            exit(EXIT_FAILURE);
-        }
-        fclose(block_dat_file);
-        escribir_en_hash(nombre_archivo);
-
+    char *path_block_dat = cargar_archivo(dir_physical_blocks, nombre_archivo);;
+    FILE *block_dat_file = fopen(path_block_dat, "wb+");
+    if (!block_dat_file) {
+        log_error(logger,"Error al abrir blocks_hash_index.config");
+        exit(EXIT_FAILURE);
     }
+    fclose(block_dat_file);
+    escribir_en_hash(nombre_archivo);
 }
 
 void inicializar_bloques_logicos(){
@@ -382,7 +380,7 @@ void inicializar_bloques_logicos(){
     sprintf(dir_logical_base ,"%s/%s", Base,"000000.dat");
     sprintf(dir_phisical_base ,"%s/%s", dir_physical_blocks,"block0000.dat");
     ocupar_espacio_bitmap(0);
-
+    inicializar_bloque_fisico(0);
     link(dir_phisical_base,dir_logical_base); //ESTO ESTA MAL >:( (Hardcodeado)
     
 }
