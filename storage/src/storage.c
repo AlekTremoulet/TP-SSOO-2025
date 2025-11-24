@@ -91,7 +91,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             paquete_recv = recibir_paquete(socket_nuevo);
             archivo = list_remove(paquete_recv, 0); 
             tag = list_remove(paquete_recv, 0); 
-            query_id = list_remove(paquete_recv, 0);
+            query_id = *(int*) list_remove(paquete_recv, 0);
             Crear_file(archivo,tag,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
@@ -100,7 +100,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
             tamanio = list_remove(paquete_recv, 0);
-            query_id = list_remove(paquete_recv, 0);
+            query_id = *(int*) list_remove(paquete_recv, 0);
             Truncar_file(archivo,tag,tamanio,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
@@ -110,7 +110,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             tag = list_remove(paquete_recv, 0);
             int* dir_base = list_remove(paquete_recv, 0);
             char* contenido = list_remove(paquete_recv, 0);
-            query_id = list_remove(paquete_recv, 0);
+            query_id = *(int*) list_remove(paquete_recv, 0);
             Escrbir_bloque(archivo,tag,dir_base,contenido,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
@@ -120,7 +120,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             tag = list_remove(paquete_recv, 0);
             dir_base = list_remove(paquete_recv, 0);
             tamanio = list_remove(paquete_recv, 0);
-            query_id = list_remove(paquete_recv, 0);
+            query_id = *(int*) list_remove(paquete_recv, 0);
             Leer_bloque(archivo,tag,dir_base,tamanio,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
@@ -130,7 +130,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             char* tag_ori = list_remove(paquete_recv, 0);
             char* arch_dest = list_remove(paquete_recv, 0);
             char* tag_dest = list_remove(paquete_recv, 0);
-            query_id = list_remove(paquete_recv, 0);
+            query_id = *(int*) list_remove(paquete_recv, 0);
             Crear_tag(tag_ori,arch_dest,tag_ori,tag_dest,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
@@ -138,7 +138,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             paquete_recv = recibir_paquete(socket_nuevo);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
-            query_id = list_remove(paquete_recv, 0);
+            query_id = *(int*) list_remove(paquete_recv, 0);
             Commit_tag(archivo,tag,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
@@ -150,7 +150,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             paquete_recv = recibir_paquete(socket_nuevo);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
-            query_id = list_remove(paquete_recv, 0);
+            query_id = *(int*) list_remove(paquete_recv, 0);
             Eliminar_tag(archivo,tag,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;

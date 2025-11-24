@@ -313,9 +313,8 @@ qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio, int query_i
 qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido, int query_id) {
     log_info(logger, "## Query %d: Ejecutando WRITE %s:%s %d %s", query_id, archivo, tag, dir_base, contenido);
     /*
-    if(!memoria_tiene_paginas_necesarias()) //hay que modelarla
-            solicitar_paginas_a_storage() 
-    */
+
+
     /*osea, esto ira en el worker query memory, estoy pidiendo las paginas aca a storage*(solicitar_paginas_a_storage()):*/
     t_paquete* paquete = crear_paquete(OP_WRITE);
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
