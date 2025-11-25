@@ -26,6 +26,7 @@ typedef enum {
 
 extern char * dir_files;
 extern t_bitarray* bitmap;
+extern char * dir_physical_blocks;
 //Operaciones
 
 
