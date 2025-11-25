@@ -379,7 +379,7 @@ void *hilo_worker_query(void *arg) {
             disminuir_cantidad_workers();
             free(w);
             query_finalizar(q, "desconexion de worker");
-            log_info(logger, "## Se desconecta el Worker %d - Se finaliza la Query %d - Cantidad total de Workers: %d", w->id, q->id_query, obtener_cantidad_workers())
+            log_info(logger, "## Se desconecta el Worker %d - Se finaliza la Query %d - Cantidad total de Workers: %d", w->id, q->id_query, obtener_cantidad_workers());
         }
 
         switch (cod) {

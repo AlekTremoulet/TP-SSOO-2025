@@ -11,13 +11,7 @@ extern int id_query_actual;
 
 
 // estructuras FIFO
-typedef struct {
-    int id_query;
-    int prioridad;
-    char *archivo;   // copia del path que manda el Query (uso strdup)
-    int pc;
-    int socket_qc;   // socket del Query para avisarle el final
-} query_t;
+
 
 typedef struct {
     int id;
