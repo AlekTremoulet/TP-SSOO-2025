@@ -1,9 +1,7 @@
 #ifndef MASTER_MAIN_
 #define MASTER_MAIN_
 
-#include <utils/utils.h>
-#include <commons/log.h>
-#include <commons/config.h>
+#include <master_query.h>
 
 extern t_log *logger;
 extern t_config *config;
@@ -17,6 +15,7 @@ typedef struct {
     int id_query;
     int prioridad;
     char *archivo;   // copia del path que manda el Query (uso strdup)
+    int pc;
     int socket_qc;   // socket del Query para avisarle el final
 } query_t;
 
