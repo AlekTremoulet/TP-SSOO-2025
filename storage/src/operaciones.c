@@ -31,11 +31,14 @@ void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int
     else
     {
         buscar_y_ocupar_siguiente_bit_libre(Siguiente_bit_libre);
-        inicializar_bloque_fisico(Siguiente_bit_libre);
+        char *nombre_archivo = malloc(20);
+        sprintf(nombre_archivo, "/block%04d.dat", Siguiente_bit_libre);
+        escribir_en_hash(nombre_archivo);
         log_info(logger,"<%d> - Bloque Lógico Escrito <%s>:<%s> - Número de Bloque: <%d>",query_id,archivo,tag,Siguiente_bit_libre);
     }
 
 }; 
+
 void Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query_id){
     log_info(logger,"<%d> - Bloque Lógico Leído <%s>:<%s> - Número de Bloque: <%d>",query_id,archivo,tag,tamanio);//aca no va tamanio si no que se saca el Numero de bloque
 }; 
@@ -69,3 +72,4 @@ void Eliminar_tag(char * Origen, char* tag, int query_id){
 void Commit_tag(char* archivo, char* tag, int query_id){
     log_info(logger,"<%d> - Commit de File:Tag <%s>:<%s>",query_id,archivo,tag);
 }; 
+

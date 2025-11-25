@@ -18,6 +18,9 @@ int main(int argc, char* argv[]) {
     inicializar_bitmap();
     inicializar_hash();
     inicializar_bloques_logicos();
+    for (int i = 0; i < block_count; i++) {
+        inicializar_bloque_fisico(i);
+    }
     Crear_file("archivo","tag",1);
     Truncar_file("archivo","tag",10,1);    
     Escrbir_bloque("archivo","tag",1,"hola",3);
@@ -266,12 +269,6 @@ char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo){
 
 void inicializar_hash() {
     path_hash = cargar_archivo(punto_montaje,"/blocks_hash_index.config");
-    FILE *hash_file = fopen(path_hash, "wb+");
-    if (!hash_file) {
-        log_error(logger,"Error al abrir blocks_hash_index.config");
-        exit(EXIT_FAILURE);
-    }
-    fclose(hash_file);
 }
 
 char *escribir_en_hash(char *nombre_bloque) {
@@ -369,7 +366,6 @@ void inicializar_bloque_fisico(int numero_bloque){
         exit(EXIT_FAILURE);
     }
     fclose(block_dat_file);
-    escribir_en_hash(nombre_archivo);
 }
 
 void inicializar_bloques_logicos(){
@@ -380,7 +376,9 @@ void inicializar_bloques_logicos(){
     sprintf(dir_logical_base ,"%s/%s", Base,"000000.dat");
     sprintf(dir_phisical_base ,"%s/%s", dir_physical_blocks,"block0000.dat");
     ocupar_espacio_bitmap(0);
-    inicializar_bloque_fisico(0);
+    char *nombre_archivo = malloc(20);
+    sprintf(nombre_archivo, "/block%04d", 0);
+    escribir_en_hash(nombre_archivo);
     link(dir_phisical_base,dir_logical_base); //ESTO ESTA MAL >:( (Hardcodeado)
     
 }
