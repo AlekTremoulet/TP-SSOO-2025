@@ -380,10 +380,20 @@ void *hilo_worker_query(void *arg) {
             int *id_ptr = list_remove(paquete, 0);
             int id_query = *id_ptr;
 
-            int *size_ptr = list_remove(paquete, 1);
-            int size = *size_ptr;
+            int *size_ptr = list_remove(paquete, 0);
+            int size = *size_ptr; // cuantos bytes tiene la lectura
 
-            void *buffer = list_remove(paquete, 2);
+            void *buffer = list_remove(paquete, 0); // contenido de la lectura
+
+            int socket_qc = q->socket_qc;
+
+            t_paquete *lectura_qc = crear_paquete(QUERY_LECTURA);
+            agregar_a_paquete(lectura_qc, &id_query, sizeof(int));
+            agregar_a_paquete(lectura_qc, &size, sizeof(int));
+            agregar_a_paquete(lectura_qc, buffer, size);
+
+            enviar_paquete(lectura_qc, socket_qc);
+            eliminar_paquete(lectura_qc);
 
             log_info(logger, "## Se envía un mensaje de lectura de la Query <%d> en el Worker <%d> al Query Control", q->id_query, w->id);
 
