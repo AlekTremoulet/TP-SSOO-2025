@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["query.config","hola",1],
+      "args": ["query.config","FIFO_1",1],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

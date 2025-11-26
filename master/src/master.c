@@ -344,6 +344,8 @@ void planificador_fifo() {
         dwq->worker = w;
         dwq->query  = q;
 
+        encolar_worker(workers_busy, w, -1);
+
         // creo el thread para worker+query
         pthread_t th_wq;
         pthread_create(&th_wq, NULL, hilo_worker_query, dwq);
@@ -361,7 +363,7 @@ void *hilo_worker_query(void *arg) {
     worker_t *w = dwq->worker;
     query_t  *q = dwq->query;
 
-    log_info(logger, "## Se envía la Query <%d> (<%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
+    log_info(logger, "## Se envía la Query <%d> (PRIORIDAD <%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
 
     // le mando al W el path + id_query
     t_paquete *p = crear_paquete(PARAMETROS_QUERY);
