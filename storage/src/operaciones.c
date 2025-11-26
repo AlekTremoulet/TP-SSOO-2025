@@ -96,6 +96,10 @@ void Crear_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino, 
     sprintf(comando ,"cp -r %s %s", Origen,Destino);
     system(comando);
     free(comando);
+    t_estado_metadata estado_nuevo = WIP;
+    char* ruta_archivo = malloc(strlen(dir_files) + strlen(Destino) + strlen(tag_destino) + 1);
+    sprintf(ruta_archivo, "%s//",dir_files,Destino,tag_destino);
+    Cambiar_estado(ruta_archivo, estado_nuevo);
     log_info(logger,"<%d> - Tag Creado <%s>:<%s>",query_id,Destino,tag_destino);
 };
 
@@ -120,3 +124,19 @@ void Commit_tag(char* archivo, char* tag, int query_id){
     log_info(logger,"<%d> - Commit de File:Tag <%s>:<%s>",query_id,archivo,tag);
 }; 
 
+void Cambiar_estado(char* ruta_archivo, t_estado_metadata estado){
+    t_config *Config_a_cambiar = config_create(ruta_archivo);
+    switch (estado)
+    {
+    case WIP:
+        config_set_value(Config_a_cambiar, "ESTADO", "WORK IN PROGRESS");
+        break;
+    case COMMITED:
+        config_set_value(Config_a_cambiar, "ESTADO", "COMMITED");
+        break;
+    default:
+        log_error(logger,"ESTADO NO RECONOCIDO");
+        break;
+    }
+    config_destroy(Config_a_cambiar);
+}
