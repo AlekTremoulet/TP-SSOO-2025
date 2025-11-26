@@ -1,9 +1,7 @@
 #ifndef MASTER_MAIN_
 #define MASTER_MAIN_
 
-#include <utils/utils.h>
-#include <commons/log.h>
-#include <commons/config.h>
+#include <master_query.h>
 
 extern t_log *logger;
 extern t_config *config;
@@ -13,17 +11,18 @@ extern int id_query_actual;
 
 
 // estructuras FIFO
-typedef struct {
-    int id_query;
-    int prioridad;
-    char *archivo;   // copia del path que manda el Query (uso strdup)
-    int socket_qc;   // socket del Query para avisarle el final
-} query_t;
+
 
 typedef struct {
     int id;
     int socket_worker;   // socket del Worker para mandarle la tarea al Worker: path + id_query
 } worker_t;
+
+// los datos que necesito pasarle al thread
+typedef struct {
+    worker_t *worker;
+    query_t  *query;
+} datos_worker_query_t;
 
 int main(int argc, char* argv[]);
 void levantarConfig(char *args);
@@ -43,5 +42,6 @@ query_t *desencolar_query(list_struct_t *cola, int index);
 void planificador_fifo();
 void planificador_prioridades();
 void *planificador(void * args);
+void *hilo_worker_query(void *arg);
 
 #endif

@@ -71,8 +71,8 @@ void levantarConfig(char *args){
     algo_planificacion = config_get_string_value(config, "ALGORITMO_PLANIFICACION");
 
     // inicializo colas FIFO
-    cola_ready_queries = inicializarLista();
-    workers_libres     = inicializarLista();
+    //cola_ready_queries = inicializarLista();
+    //workers_libres     = inicializarLista();
 
     pthread_mutex_init(&m_id, NULL);
 
@@ -109,12 +109,15 @@ void aumentar_cantidad_workers(){
     pthread_mutex_lock(mutex_cantidad_workers);
     cantidad_workers++;
     pthread_mutex_unlock(mutex_cantidad_workers);
+    aumentar_nivel_multiprocesamiento();
+
 }
 
 void disminuir_cantidad_workers(){
     pthread_mutex_lock(mutex_cantidad_workers);
     cantidad_workers--;
     pthread_mutex_unlock(mutex_cantidad_workers);
+    disminuir_nivel_multiprocesamiento();
 }
 int obtener_cantidad_workers(){
     pthread_mutex_lock(mutex_cantidad_workers);
@@ -179,8 +182,7 @@ void *handler_cliente(void *arg) {
             q->prioridad = prioridad;
             q->id_query  = id_asignado;
             q->socket_qc = socket_nuevo;           // guardo el socket del QC
-
-            aumentar_nivel_multiprocesamiento();
+            q->pc = 0;
 
             log_info(logger,
                 "## Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <%d>",
@@ -219,7 +221,7 @@ void *handler_cliente(void *arg) {
         }
 
         // resultado
-        case DEVOLUCION_WORKER: {
+        case WORKER_FINALIZACION: {
             // TODO: leer (id_query, status) del paquete
             // TODO: re-encolar este worker en workers_libres
             // TODO: buscar socket_qc por id_query y enviar DEVOLUCION_QUERY
@@ -318,6 +320,9 @@ void planificador_fifo() {
         worker_t *w = desencolar_worker(workers_libres,0);
         query_t *q = desencolar_query(cola_ready_queries,0);
 
+        // marco al W como ocupado, cuando lo desencolo
+        //encolar_worker(workers_busy, w, -1);
+
         if (w == NULL || q == NULL) {
             // si no hay elementos, sigo
             continue;
@@ -334,31 +339,140 @@ void planificador_fifo() {
         luego en el thread de worker atajamos el motivo de devolucion. Liberamos el worker y ponemos el query en la lista de ready o lo finalizamos
         */
 
-        // envio la asignacion al Worker: path + id_query
-        t_paquete *p = crear_paquete(PARAMETROS_QUERY);
-        agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1);
-        agregar_a_paquete(p, &(q->id_query), sizeof(int));
-        enviar_paquete(p, w->socket_worker);
-        eliminar_paquete(p);
+         // estructura que voy a pasarle al thread
+        datos_worker_query_t *dwq = malloc(sizeof(datos_worker_query_t));
+        dwq->worker = w;
+        dwq->query  = q;
 
-        log_info(logger, "FIFO: Asignada Query id <%d> al Worker id <%d>",
-                 q->id_query, w->id);
+        encolar_worker(workers_busy, w, -1);
 
-        free(w);
-        free(q->archivo);
-        free(q);
+        // creo el thread para worker+query
+        pthread_t th_wq;
+        pthread_create(&th_wq, NULL, hilo_worker_query, dwq);
+        pthread_detach(th_wq);
 
-        // TODO: el worker queda ocupado hasta implementar la devolucion
+        // el planificador no se queda esperando
     }
     return;
 }
+
+void *hilo_worker_query(void *arg) {
+
+    // recibo el paquete de datos
+    datos_worker_query_t *dwq = (datos_worker_query_t *)arg;
+    worker_t *w = dwq->worker;
+    query_t  *q = dwq->query;
+
+    log_info(logger, "## Se envía la Query <%d> (PRIORIDAD <%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
+
+    // le mando al W el path + id_query
+    t_paquete *p = crear_paquete(PARAMETROS_QUERY);
+    agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1); // envio path
+    agregar_a_paquete(p, &(q->id_query), sizeof(int));        // envio id
+    agregar_a_paquete(p, &(q->pc), sizeof(int)); //envio pc
+    enviar_paquete(p, w->socket_worker);
+    eliminar_paquete(p);
+
+    // respuesta del W
+    while(1){
+        protocolo_socket cod = recibir_operacion(w->socket_worker);
+
+        if (cod == -1){
+            disminuir_cantidad_workers();
+            free(w);
+            query_finalizar(q, "desconexion de worker");
+            log_info(logger, "## Se desconecta el Worker %d - Se finaliza la Query %d - Cantidad total de Workers: %d", w->id, q->id_query, obtener_cantidad_workers());
+        }
+
+        switch (cod) {
+
+            case WORKER_LECTURA: {
+
+                t_list* paquete = recibir_paquete(w->socket_worker);
+
+                //recibimos id de worker?
+                int id_query = *(int *)list_remove(paquete, 0);
+
+                int size = *(int *)list_remove(paquete, 0);
+
+                void *buffer = list_remove(paquete, 0);
+
+                log_info(logger, "## Se envía un mensaje de lectura de la Query <%d> en el Worker <%d> al Query Control", q->id_query, w->id);
+
+                query_enviar_lectura(q, buffer, size);
+
+                break;
+            }
+
+            case WORKER_FINALIZACION: {
+
+                t_list *paquete = recibir_paquete(w->socket_worker);
+                if (paquete != NULL) {
+                    list_destroy_and_destroy_elements(paquete, free);
+                }
+            
+                log_info(logger, "## Se terminó la Query <%d> en el Worker <%d>", q->id_query, w->id);
+
+                // termino una query
+
+                // reencolar worker como libre
+                encolar_worker(workers_libres, w, -1);
+
+                query_finalizar(q, "Fin de query");
+
+                free(q->archivo);
+                free(q);
+                free(dwq);
+
+                //en caso de no-lectura se corta el while
+                return NULL;
+            }
+
+            case WORKER_DESALOJO: {
+                
+                t_list *paquete = recibir_paquete(w->socket_worker);
+
+                //guardo el PC
+                q->pc = *(int *)list_remove(paquete, 0);
+
+                if (paquete != NULL) {
+                    list_destroy_and_destroy_elements(paquete, free);
+                }
+
+                log_info(logger, "## Se desaloja la Query <%d> (<%d>) del Worker <%d> - Motivo: <PRIORIDAD>", q->id_query, q->prioridad, w->id);
+
+                // reencolo la query en READY para que vuelva a planificarse
+                encolar_query(cola_ready_queries, q, -1);
+
+                // reencolo el worker como libre
+                encolar_worker(workers_libres, w, -1);
+
+                free(dwq);
+
+                //en caso de no-lectura se corta el while
+                return NULL;
+            }   
+
+            default:
+                log_error(logger, "Worker <%d> devolvió un código inesperado <%d>", w->id, cod);
+                
+                free(q->archivo);
+                free(q);
+                free(dwq);
+
+                encolar_worker(workers_libres, w, -1);
+
+                break;
+        }
+    }
+    
+
+    // el worker no se libera, solo se reencola
+    return NULL;
+}
+
 
 void planificador_prioridades(){
     log_error(logger, "El planificador de prioridades no esta definido todavia");
     return;
 }
-
-// TODO: manejar DEVOLUCION_WORKER (id_query, status)
-//   - re-encolar al worker en workers_libres
-//   - avisarle al Query por socket_qc con DEVOLUCION_QUERY(status)
-//   - IMPORTANTE: hay que guardar una tabla id_query -> socket_qc para saber xq socket responder a cada query cuando el Worker termine
