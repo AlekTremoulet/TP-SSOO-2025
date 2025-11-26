@@ -90,81 +90,82 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
         cod_op = recibir_operacion(socket_nuevo);
         switch (cod_op)
         {
-        case OP_CREATE:
-            paquete_recv = recibir_paquete(socket_nuevo);
-            archivo = list_remove(paquete_recv, 0); 
-            tag = list_remove(paquete_recv, 0); 
-            query_id = *(int*) list_remove(paquete_recv, 0);
-            Crear_file(archivo,tag,query_id);
-            enviar_paquete_ok(socket_nuevo);
-            break;
-        case OP_TRUNCATE:
-            paquete_recv = recibir_paquete(socket_nuevo);
-            archivo = list_remove(paquete_recv, 0);
-            tag = list_remove(paquete_recv, 0);
-            tamanio = list_remove(paquete_recv, 0);
-            query_id = *(int*) list_remove(paquete_recv, 0);
-            Truncar_file(archivo,tag,tamanio,query_id);
-            enviar_paquete_ok(socket_nuevo);
-            break;
-        case OP_WRITE:
-            paquete_recv = recibir_paquete(socket_nuevo);
-            archivo = list_remove(paquete_recv, 0);
-            tag = list_remove(paquete_recv, 0);
-            int* dir_base = list_remove(paquete_recv, 0);
-            char* contenido = list_remove(paquete_recv, 0);
-            query_id = *(int*) list_remove(paquete_recv, 0);
-            Escrbir_bloque(archivo,tag,dir_base,contenido,query_id);
-            enviar_paquete_ok(socket_nuevo);
-            break;
-        case OP_READ:
-            paquete_recv = recibir_paquete(socket_nuevo);
-            archivo = list_remove(paquete_recv, 0);
-            tag = list_remove(paquete_recv, 0);
-            dir_base = list_remove(paquete_recv, 0);
-            tamanio = list_remove(paquete_recv, 0);
-            query_id = *(int*) list_remove(paquete_recv, 0);
-            Leer_bloque(archivo,tag,dir_base,tamanio,query_id);
-            enviar_paquete_ok(socket_nuevo);
-            break;
-        case OP_TAG:
-            paquete_recv = recibir_paquete(socket_nuevo);
-            char* arch_ori = list_remove(paquete_recv, 0);
-            char* tag_ori = list_remove(paquete_recv, 0);
-            char* arch_dest = list_remove(paquete_recv, 0);
-            char* tag_dest = list_remove(paquete_recv, 0);
-            query_id = *(int*) list_remove(paquete_recv, 0);
-            Crear_tag(tag_ori,arch_dest,tag_ori,tag_dest,query_id);
-            enviar_paquete_ok(socket_nuevo);
-            break;
-        case OP_COMMIT:
-            paquete_recv = recibir_paquete(socket_nuevo);
-            archivo = list_remove(paquete_recv, 0);
-            tag = list_remove(paquete_recv, 0);
-            query_id = *(int*) list_remove(paquete_recv, 0);
-            Commit_tag(archivo,tag,query_id);
-            enviar_paquete_ok(socket_nuevo);
-            break;
-        case OP_FLUSH:
-            //cuando este listo memoria vemos esto
-            enviar_paquete_ok(socket_nuevo);
-            break;
-        case OP_DELETE:
-            paquete_recv = recibir_paquete(socket_nuevo);
-            archivo = list_remove(paquete_recv, 0);
-            tag = list_remove(paquete_recv, 0);
-            query_id = *(int*) list_remove(paquete_recv, 0);
-            Eliminar_tag(archivo,tag,query_id);
-            enviar_paquete_ok(socket_nuevo);
-            break;
-        case PARAMETROS_STORAGE:
-                t_paquete* paquete_send = crear_paquete(PARAMETROS_STORAGE);
-                agregar_a_paquete(paquete_send,&tam_bloque,sizeof(int));
-                enviar_paquete(paquete_send,socket_nuevo);
-                eliminar_paquete(paquete_send);
-            break;
+        // case OP_CREATE:
+        //     paquete_recv = recibir_paquete(socket_nuevo);
+        //     archivo = list_remove(paquete_recv, 0); 
+        //     tag = list_remove(paquete_recv, 0); 
+        //     query_id = *(int*) list_remove(paquete_recv, 0);
+        //     Crear_file(archivo,tag,query_id);
+        //     enviar_paquete_ok(socket_nuevo);
+        //     break;
+        // case OP_TRUNCATE:
+        //     paquete_recv = recibir_paquete(socket_nuevo);
+        //     archivo = list_remove(paquete_recv, 0);
+        //     tag = list_remove(paquete_recv, 0);
+        //     tamanio = list_remove(paquete_recv, 0);
+        //     query_id = *(int*) list_remove(paquete_recv, 0);
+        //     Truncar_file(archivo,tag,tamanio,query_id);
+        //     enviar_paquete_ok(socket_nuevo);
+        //     break;
+        // case OP_WRITE:
+        //     paquete_recv = recibir_paquete(socket_nuevo);
+        //     archivo = list_remove(paquete_recv, 0);
+        //     tag = list_remove(paquete_recv, 0);
+        //     int* dir_base = list_remove(paquete_recv, 0);
+        //     char* contenido = list_remove(paquete_recv, 0);
+        //     query_id = *(int*) list_remove(paquete_recv, 0);
+        //     Escrbir_bloque(archivo,tag,dir_base,contenido,query_id);
+        //     enviar_paquete_ok(socket_nuevo);
+        //     break;
+        // case OP_READ:
+        //     paquete_recv = recibir_paquete(socket_nuevo);
+        //     archivo = list_remove(paquete_recv, 0);
+        //     tag = list_remove(paquete_recv, 0);
+        //     dir_base = list_remove(paquete_recv, 0);
+        //     tamanio = list_remove(paquete_recv, 0);
+        //     query_id = *(int*) list_remove(paquete_recv, 0);
+        //     Leer_bloque(archivo,tag,dir_base,tamanio,query_id);
+        //     enviar_paquete_ok(socket_nuevo);
+        //     break;
+        // case OP_TAG:
+        //     paquete_recv = recibir_paquete(socket_nuevo);
+        //     char* arch_ori = list_remove(paquete_recv, 0);
+        //     char* tag_ori = list_remove(paquete_recv, 0);
+        //     char* arch_dest = list_remove(paquete_recv, 0);
+        //     char* tag_dest = list_remove(paquete_recv, 0);
+        //     query_id = *(int*) list_remove(paquete_recv, 0);
+        //     Crear_tag(tag_ori,arch_dest,tag_ori,tag_dest,query_id);
+        //     enviar_paquete_ok(socket_nuevo);
+        //     break;
+        // case OP_COMMIT:
+        //     paquete_recv = recibir_paquete(socket_nuevo);
+        //     archivo = list_remove(paquete_recv, 0);
+        //     tag = list_remove(paquete_recv, 0);
+        //     query_id = *(int*) list_remove(paquete_recv, 0);
+        //     Commit_tag(archivo,tag,query_id);
+        //     enviar_paquete_ok(socket_nuevo);
+        //     break;
+        // case OP_FLUSH:
+        //     //cuando este listo memoria vemos esto
+        //     enviar_paquete_ok(socket_nuevo);
+        //     break;
+        // case OP_DELETE:
+        //     paquete_recv = recibir_paquete(socket_nuevo);
+        //     archivo = list_remove(paquete_recv, 0);
+        //     tag = list_remove(paquete_recv, 0);
+        //     query_id = *(int*) list_remove(paquete_recv, 0);
+        //     Eliminar_tag(archivo,tag,query_id);
+        //     enviar_paquete_ok(socket_nuevo);
+        //     break;
+        // case PARAMETROS_STORAGE:
+        //         t_paquete* paquete_send = crear_paquete(PARAMETROS_STORAGE);
+        //         agregar_a_paquete(paquete_send,&tam_bloque,sizeof(int));
+        //         enviar_paquete(paquete_send,socket_nuevo);
+        //         eliminar_paquete(paquete_send);
+        //     break;
         default:
             log_error(logger, "Se recibio un protocolo inesperado de WORKER");
+            enviar_paquete_ok(socket_nuevo);
             return (void *)EXIT_FAILURE;
             break;
         }

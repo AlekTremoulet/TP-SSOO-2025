@@ -201,16 +201,15 @@ void loop_principal(){
             program_counter = *(int *) list_remove(paquete_recv, 0);
 
             //hay que modificar ejecutar query para que corra de a una linea, dandonos la oporturnidad de chequear si hay desalojo desde master
-            while(!obtener_desalojo_flag()){
-                ejecutar_query(query_path, query_id);
-            }if (obtener_desalojo_flag()){
-                //llamo a una funcion que atienda el desalojo, o escribir aca mismo. Hay que darle el PC a master
-                //seteo el flag en false
-                setear_desalojo_flag(false);
-                //sigo con mi vida
+            while(1){
+                if (obtener_desalojo_flag()){
+                    //llamo a una funcion que atienda el desalojo, o escribir aca mismo. Hay que darle el PC a master
+                    //luego, seteo el flag en false
+                    setear_desalojo_flag(false);
+                    //sigo con mi vida
+                }else ejecutar_query(query_path, query_id);
             }
             
-
             break;
         
         case QUERY_FINALIZACION:
