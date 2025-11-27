@@ -42,7 +42,7 @@ void Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query_
 void Eliminar_tag(char* archivo, char* tag, int query_id); 
 void Crear_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino, int query_id);
 void Commit_tag(char* archivo, char* tag, int query_id); 
-void Cambiar_estado(char* ruta_archivo, t_estado_metadata estado);
+
 
 
 

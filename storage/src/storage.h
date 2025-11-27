@@ -36,11 +36,6 @@ typedef struct {
     char * ruta_tag;
 } t_archivo_creado;
 
-typedef struct {
-    char * Estado;
-    char * Blocks; 
-    char * Tamanio;
-} t_bloque_fisico;
 
 
 
