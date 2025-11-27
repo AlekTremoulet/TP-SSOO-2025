@@ -13,7 +13,8 @@ typedef enum {
     QI_ERR_FUERA_LIMITE,
     QI_ERR_OP_NO_PERMITIDA, 
     QI_ERR_NO_ENCONTRADA, 
-    QI_ERR_NO_HAY_ESPACIO
+    QI_ERR_NO_HAY_ESPACIO,
+    QI_ERR_STORAGE
 } qi_status_t;
 
 extern int flag_desalojo;
