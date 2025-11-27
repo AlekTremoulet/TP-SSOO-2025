@@ -471,8 +471,70 @@ void *hilo_worker_query(void *arg) {
     return NULL;
 }
 
+// saca de cola_ready_queries la query con mejor prioridad (osea el numero mas chico)
+static query_t *sacar_mejor_query_ready(void) {
+    pthread_mutex_lock(cola_ready_queries->mutex);
 
-void planificador_prioridades(){
+    int size = list_size(cola_ready_queries->lista);
+    if (size == 0) {
+        pthread_mutex_unlock(cola_ready_queries->mutex);
+        return NULL;
+    }
+
+    int indice_prioridad_minima = 0; 
+    query_t *query_con_mejor_prioridad = list_get(cola_ready_queries->lista, 0); // asumo que es la de la primera posicion
+
+    for (int i = 1; i < size; i++) {
+        query_t *q = list_get(cola_ready_queries->lista, i);
+        // menor numero = mejor prioridad
+        if (q->prioridad < query_con_mejor_prioridad->prioridad) {
+            query_con_mejor_prioridad = q;
+            indice_prioridad_minima = i;
+        }
+    }
+
+    query_t *resultado = list_remove(cola_ready_queries->lista, indice_prioridad_minima);
+
+    pthread_mutex_unlock(cola_ready_queries->mutex);
+    return resultado;
+}
+
+/* void planificador_prioridades(){
     log_error(logger, "El planificador de prioridades no esta definido todavia");
     return;
+} */
+
+void planificador_prioridades() {
+    while (1) {
+        // espero hasta tener un W libre y una Q en READY
+        sem_wait(workers_libres->sem);
+        sem_wait(cola_ready_queries->sem);
+
+        worker_t *w = desencolar_worker(workers_libres, 0);
+        query_t *q = sacar_mejor_query_ready(); // numero mas chico=mejor prioridad
+
+        if (w == NULL || q == NULL) {
+            if (w != NULL) {
+                encolar_worker(workers_libres, w, -1);
+                sem_post(workers_libres->sem);
+            }
+            // no hay Q
+            continue;
+        }
+
+        // hilo worker+query
+        datos_worker_query_t *dwq = malloc(sizeof(datos_worker_query_t));
+        dwq->worker = w;
+        dwq->query  = q;
+
+        // marco al W como ocupado
+        encolar_worker(workers_busy, w, -1);
+
+        log_info(logger, "PRIORIDADES: Se envía la Query <%d> (PRIORIDAD <%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
+
+        // creo hilo worker+query
+        pthread_t th_wq;
+        pthread_create(&th_wq, NULL, hilo_worker_query, dwq);
+        pthread_detach(th_wq);
+    }
 }
