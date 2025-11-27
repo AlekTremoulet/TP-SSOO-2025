@@ -25,6 +25,9 @@ int main(int argc, char* argv[]) {
     Truncar_file("archivo","tag",10,1);    
     Escrbir_bloque("archivo","tag",1,"hola",3);
     Escrbir_bloque("archivo","tag",1,"hola",3);
+    Commit_tag("archivo","tag",1);
+    Truncar_file("archivo","tag",1,1); 
+    Escrbir_bloque("archivo","tag",1, "camboya",1);
     // Crear_tag("/home/utnso/storage/files/initial_file","/home/utnso/storage/files/initial_file2");
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
@@ -299,7 +302,7 @@ char *escribir_en_hash(char *nombre_bloque) {
     return nombre_bloque_hash; 
 }
 
-char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) { //Operacion de crear archivo
+char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
     t_archivo_creado archivo;
     archivo.nombre = nombre_archivo;
     archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
@@ -319,14 +322,12 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) { //Operacio
     char *directorio_config_asociada = cargar_archivo("",config_asociada);
     log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
 
-    
-    // ESTO LO VOY A HACER A PARTE PERO ME DA FIACA HACERLO AHORA
-    t_bloque_fisico Bloque_F; 
-    Bloque_F.Estado = "WORK IN PROGRESS";
-    Bloque_F.Blocks = "[]"; // getBlockesMetadata();
-    Bloque_F.Tamanio = "0"; // getTamannoMetadata();
+    char *Estado = "WORK IN PROGRESS";
+    char *Blocks = "[]";
+    char *Tamanio = "0";
 
     t_config *config_archivo_metadata = config_create(directorio_config_asociada);
+
     if (!config_archivo_metadata) {
         FILE *temp_file = fopen(directorio_config_asociada, "w");
         if (temp_file) {
@@ -339,9 +340,9 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) { //Operacio
         }
     }
     
-    config_set_value(config_archivo_metadata, "ESTADO", Bloque_F.Estado);
-    config_set_value(config_archivo_metadata, "Blocks", Bloque_F.Blocks);
-    config_set_value(config_archivo_metadata, "Tamanio", Bloque_F.Tamanio);
+    config_set_value(config_archivo_metadata, "ESTADO", Estado);
+    config_set_value(config_archivo_metadata, "Blocks", Blocks);
+    config_set_value(config_archivo_metadata, "Tamanio", Tamanio);
 
     if (config_save(config_archivo_metadata) == -1) {
         log_error(logger, "Error al guardar los datos en el .config: %s", directorio_config_asociada);
