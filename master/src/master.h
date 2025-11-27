@@ -40,7 +40,9 @@ void encolar_query(list_struct_t *cola, query_t *q, int index);
 worker_t *desencolar_worker(list_struct_t *cola, int index);
 query_t *desencolar_query(list_struct_t *cola, int index);
 void planificador_fifo();
+static query_t *sacar_mejor_query_ready(void);
 void planificador_prioridades();
+void *hilo_aging(void *arg);
 void *planificador(void * args);
 void *hilo_worker_query(void *arg);
 

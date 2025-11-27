@@ -14,6 +14,8 @@ char * algo_planificacion;
 
 int id_query_actual;
 
+int tiempo_aging_ms = 0;
+
 
 // colas thread-safe
 list_struct_t *cola_ready_queries;  // elementos: query_t*
@@ -34,6 +36,14 @@ int main(int argc, char* argv[]) {
     levantarConfig(argv[argc-1]);
 
     inicializarEstructurasMaster();
+
+    // AGING
+    if (!strcmp(algo_planificacion, "PRIORIDADES") && tiempo_aging_ms > 0) {
+        pthread_t tid_aging;
+        pthread_create(&tid_aging, NULL, hilo_aging, NULL);
+        pthread_detach(tid_aging);
+        log_info(logger, "## Se inicia hilo de aging cada <%d> ms", tiempo_aging_ms);
+    }
 
     // FIFO
     pthread_create(&tid_planificador, NULL, planificador, NULL);
@@ -73,6 +83,13 @@ void levantarConfig(char *args){
     // inicializo colas FIFO
     //cola_ready_queries = inicializarLista();
     //workers_libres     = inicializarLista();
+
+    // aging !!!
+    if (config_has_property(config, "TIEMPO_AGING")) {
+        tiempo_aging_ms = config_get_int_value(config, "TIEMPO_AGING");
+    } else {
+        tiempo_aging_ms = 0;
+    }
 
     pthread_mutex_init(&m_id, NULL);
 
@@ -468,6 +485,39 @@ void *hilo_worker_query(void *arg) {
     
 
     // el worker no se libera, solo se reencola
+    return NULL;
+}
+
+// hilo de aging: cada TIEMPO_AGING baja en 1 la prioridad de las Q en READY (si > 0)
+void *hilo_aging(void *arg) {
+    while (1) {
+        if (tiempo_aging_ms <= 0) {
+            // no hay tiempo configurado
+            // usleep(1000 * 100); ¿??
+            continue;
+        }
+
+        usleep(tiempo_aging_ms * 1000); // espero TIEMPO_AGING ms
+
+        pthread_mutex_lock(cola_ready_queries->mutex);
+
+        t_list_iterator *iterador_ready = list_iterator_create(cola_ready_queries->lista);
+
+        while (list_iterator_has_next(iterador_ready)) {
+            query_t *q = list_iterator_next(iterador_ready);
+
+            if (q->prioridad > 0) {
+                int prioridad_anterior = q->prioridad;
+                q->prioridad--;
+
+                log_info(logger, "##%d Cambio de prioridad: %d - %d", q->id_query, prioridad_anterior, q->prioridad);
+            }
+        }
+
+        list_iterator_destroy(iterador_ready);
+        pthread_mutex_unlock(cola_ready_queries->mutex);
+    }
+
     return NULL;
 }
 
