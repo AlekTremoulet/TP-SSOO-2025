@@ -258,7 +258,7 @@ char* Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query
     if (config_a_leer == NULL) {
         log_error(logger, "Error: No se pudo abrir la metadata en %s", metadata_config_asociado);
         free(metadata_config_asociado);
-        return NULL; // Devolvemos NULL por error
+        return NULL;
     }
 
     char** bloques_actuales = config_get_array_value(config_a_leer, "Blocks");
@@ -274,7 +274,7 @@ char* Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query
         free(bloques_actuales);
         config_destroy(config_a_leer);
         free(metadata_config_asociado);
-        return NULL; // Devolvemos NULL por error
+        return NULL;
     }
 
     int bloque_fisico_actual = atoi(bloques_actuales[dir_base]);
@@ -305,7 +305,6 @@ char* Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query
     free(path_bloque_fisico);
     config_destroy(config_a_leer);
     free(metadata_config_asociado);
-    log_error(logger, buffer_contenido);
     return buffer_contenido;
 }
 
@@ -327,21 +326,28 @@ void Crear_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino, 
 
 void Eliminar_tag(char * Origen, char* tag, int query_id){
 
-    char * comando = malloc(strlen(dir_files) + strlen(Origen) + strlen(tag) + 1 + 10);
-    comando = "%s/%s/%s",dir_files,Origen,tag;
-    DIR* dir = opendir("mydir");
-    if (dir) {
-        sprintf(comando ,"rm -rf %s %s", Origen); //Podría llegar a borrar todo
-        closedir(dir);
-    } else if (ENOENT == errno) {
-       
+    if (strcmp(Origen, "initial_file") == 0 && strcmp(tag, "BASE") == 0) {
+        log_error(logger, "Error: NO SE PUEDE ELIMINAR EL TAG initial_file/BASE");
     } else {
-        
-    }   
-    system(comando);
-    free(comando);
-    log_info(logger,"<%d> - Tag Eliminado <%s>:<%s>",query_id,Origen,tag);
-}; 
+        int length = strlen(dir_files) + strlen(Origen) + strlen(tag) + 15;
+        char * comando = malloc(length);
+
+        if (comando == NULL) return;
+
+        sprintf(comando, "rm -rf %s/%s/%s", dir_files, Origen, tag);
+
+        int resultado = system(comando);
+
+        if (resultado == 0) {
+            log_info(logger,"<%d> - Tag Eliminado <%s>:<%s>", query_id, Origen, tag);
+        } else {
+            log_error(logger, "Error al eliminar el tag");
+        }
+
+        free(comando);
+    }
+}
+
 void Commit_tag(char* archivo, char* tag, int query_id){
     char* ruta_archivo = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + strlen("/metadata.config") + 3);
     sprintf(ruta_archivo, "%s/%s/%s/metadata.config",dir_files,archivo,tag);
