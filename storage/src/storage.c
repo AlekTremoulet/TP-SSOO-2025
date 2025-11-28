@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
     Truncar_file("archivo","tag",10,1);    
     Escrbir_bloque("archivo","tag",5, "camboya",1);
     Leer_bloque("archivo","tag",0,5,2);
+    Eliminar_tag("archivo", "tag", 12);
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -366,7 +367,7 @@ void inicializar_bloque_fisico(int numero_bloque){
 }
 
 void inicializar_bloques_logicos(){
-    char * Base = crear_archivo_en_FS("initial_file","BASE"); 
+    char * Base = crear_archivo_en_FS("initial_file","BASE"); //falta ver que este archivo NO se pueda borrar
     char *dir_logical_base = malloc(strlen(Base) + strlen("/000000.dat") + 1);
     char *dir_phisical_base = malloc(strlen(dir_physical_blocks) + strlen("/block0000.dat") + 1);
 

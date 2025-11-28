@@ -34,7 +34,6 @@ typedef struct {
 
 void inicializar_bitmap();
 int espacio_disponible(t_bitarray * bitmap);
-// void liberar_bloque(uint32_t bloque);
 int ocupar_espacio_bitmap(int offset_bit);
 int liberar_espacio_bitmap(int offset_bit);
 void destruir_bitmap();
