@@ -70,7 +70,37 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
             }
             
         } else if (tamanio < tamanio_actual) { 
-            //falta la logica de desasignar
+            int tamanio_diferencia = tamanio_actual - tamanio;
+            int cantidad_bloques = 0;
+            
+            while(bloques_actuales[cantidad_bloques] != NULL) {
+                cantidad_bloques++;
+            }
+
+            free(lista_final);
+            lista_final = string_new();
+            string_append(&lista_final, "[");
+
+            for (int i = 0; i < cantidad_bloques; i++) {
+                int bloque_id = atoi(bloques_actuales[i]);
+                
+                if (i < (cantidad_bloques - tamanio_diferencia)) {
+                    if (i > 0) {
+                        string_append(&lista_final, ",");
+                    }
+                    string_append(&lista_final, bloques_actuales[i]);
+                } else {
+                    bitarray_clean_bit(bitmap, bloque_id);
+                    
+                    char* logical_blocks_archivo_tagi = malloc(strlen(archivo_tag) + 50);
+                    sprintf(logical_blocks_archivo_tagi, "%s/logical_blocks/%06d.dat", archivo_tag, bloque_id);
+                    
+                    unlink(logical_blocks_archivo_tagi);
+                    log_info(logger, "<%d> - Bloque Liberado: %d", query_id, bloque_id);
+                    
+                    free(logical_blocks_archivo_tagi);
+                }
+            }
         }
 
         string_append(&lista_final, "]");
