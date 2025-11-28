@@ -5,6 +5,7 @@ int block_size = 0;
 int mem_delay_ms = 0;
 extern int socket_storage;
 extern int socket_master;
+extern bool flag_COMMIT == false;
 
 int program_counter;
 
@@ -56,6 +57,8 @@ qi_status_t obtener_instruccion_y_args(void* parametros_worker, const char* line
 }
 
 static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out) {
+    if (!cadena || !nombre_out || !tag_out) 
+        return false;
     // formato esperado: <NOMBRE_FILE>:<TAG>
     const char* p = strchr(cadena, ':');
     if (!p) 
@@ -104,6 +107,8 @@ qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int 
                 return QI_ERR_PARSE;
             separar_nombre_y_tag(args[1], &archivo, &tag);
             result = ejecutar_TRUNCATE(archivo, tag, atoi(args[2]), query_id);
+            if (result == QI_OK)
+                memoria_invalidar_paginas_fuera_de_rango(archivo, tag, atoi(args[2]));
             break;
 
         case WRITE:
@@ -155,6 +160,8 @@ qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int 
             break;
 
         case END:
+             log_info(logger, "## Query %d: Finalizando query", query_id);
+             memoria_flush_global(query_id);
             return QI_END;
 
         default:
@@ -204,6 +211,7 @@ void loop_principal(){
             while(!obtener_desalojo_flag()){
                 ejecutar_query(query_path, query_id);
             }if (obtener_desalojo_flag()){
+                memoria_flush_global(query_id);
                 //llamo a una funcion que atienda el desalojo, o escribir aca mismo. Hay que darle el PC a master
                 //seteo el flag en false
                 setear_desalojo_flag(false);
@@ -291,6 +299,7 @@ qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id) {
 qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio, int query_id) {
     log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", query_id, archivo, tag, tamanio);
 
+    
     t_paquete* paquete = crear_paquete(OP_TRUNCATE);
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
@@ -310,64 +319,40 @@ qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio, int query_i
     }
 }
 
-qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido, int query_id) {
-    log_info(logger, "## Query %d: Ejecutando WRITE %s:%s %d %s", query_id, archivo, tag, dir_base, contenido);
-    /*
+qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido, int query_id)
+{
+    log_info(logger,"## Query %d: Ejecutando WRITE %s:%s %d '%s'",query_id, archivo, tag, dir_base, contenido);
 
 
-    /*osea, esto ira en el worker query memory, estoy pidiendo las paginas aca a storage*(solicitar_paginas_a_storage()):*/
-    t_paquete* paquete = crear_paquete(OP_WRITE);
-    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
-    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
-    agregar_a_paquete(paquete, &dir_base, sizeof(int));
-    agregar_a_paquete(paquete, contenido, strlen(contenido) + 1);
-    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+    qi_status_t status = ejecutar_WRITE_memoria(archivo, tag, dir_base, contenido, query_id);
 
-    enviar_paquete(paquete, socket_storage);
-    eliminar_paquete(paquete);
-
-    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
-    if (respuesta == OK) {
-        log_info(logger, "## Query %d: WRITE exitoso", query_id);
-        return QI_OK;
+    if (status == QI_OK) {
+        log_info(logger, "## Query %d: WRITE exitoso en memoria interna", query_id);
     } else {
-        log_error(logger, "## Query %d: Error en WRITE", query_id);
-        return QI_ERR_PARSE;
+        log_error(logger, "## Query %d: Error en WRITE (memoria interna)", query_id);
     }
+
+    return status;
 }
 
-qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio, int query_id) {
-    log_info(logger, "## Query %d: Ejecutando READ %s:%s %d %d", query_id, archivo, tag, dir_base, tamanio);
-    /*
-    if(!memoria_tiene_paginas_necesarias()) //hay que modelarla
-            solicitar_paginas_a_storage() 
-    */ 
-    t_paquete* paquete = crear_paquete(OP_READ);
-    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
-    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
-    agregar_a_paquete(paquete, &dir_base, sizeof(int));
-    agregar_a_paquete(paquete, &tamanio, sizeof(int));
-    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio, int query_id)
+{
+    log_info(logger,
+            "## Query %d: Ejecutando READ %s:%s %d %d",query_id, archivo, tag, dir_base, tamanio);
 
-    enviar_paquete(paquete, socket_storage);
-    eliminar_paquete(paquete);
+    qi_status_t status = ejecutar_READ_memoria(archivo, tag, dir_base, tamanio, query_id);
 
-    char* buffer = malloc(tamanio + 1);
-    //comento esto pq no se de donde sale direccion base ni memoria, falta eso
-    //memcpy(buffer, memoria->contenido + direccion_base, tamanio);
-    buffer[tamanio] = '\0';
-
-    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
-    if (respuesta == OK) {
+    if (status == QI_OK) {
         log_info(logger, "## Query %d: READ exitoso", query_id);
-        return QI_OK;
     } else {
-        log_error(logger, "## Query %d: Error en READ", query_id);
-        return QI_ERR_PARSE;
+        log_error(logger, "## Query %d: Error en READ (memoria interna)", query_id);
     }
+
+    return status;
 }
 
 qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* tag_dest, int query_id) {
+    memoria_actualizar_tag(arch_ori, tag_ori, arch_dest, tag_dest);
     log_info(logger, "## Query %d: Ejecutando TAG %s:%s -> %s:%s", query_id, arch_ori, tag_ori, arch_dest, tag_dest);
 
     t_paquete* paquete = crear_paquete(OP_TAG);
@@ -391,48 +376,47 @@ qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* t
 }
 
 qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id) {
-    log_info(logger, "## Query %d: Ejecutando COMMIT %s:%s", query_id, archivo, tag);
+    log_info(logger, "## Query %d: Ejecutando COMMIT %s:%s",query_id, archivo, tag);
+
+    qi_status_t st = ejecutar_FLUSH_memoria(archivo, tag, query_id);
+    if (st != QI_OK) {
+        log_error(logger, "## Query %d: Error durante FLUSH previo al COMMIT",query_id);
+        return st;
+    }
 
     t_paquete* paquete = crear_paquete(OP_COMMIT);
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
-    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+    agregar_a_paquete(paquete, &query_id, sizeof(int));
 
     enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
-    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
-    if (respuesta == OK) {
+    flag_COMMIT == true;
+    
+    protocolo_socket resp = recibir_paquete_ok(socket_storage);
+    if (resp == OK) {
         log_info(logger, "## Query %d: COMMIT exitoso", query_id);
         return QI_OK;
-    } else {
-        log_error(logger, "## Query %d: Error en COMMIT", query_id);
-        return QI_ERR_PARSE;
     }
+
+    log_error(logger, "## Query %d: Error en COMMIT", query_id);
+    return QI_ERR_PARSE;
 }
+
 
 qi_status_t ejecutar_FLUSH(char* archivo, char* tag, int query_id) {
-    log_info(logger, "## Query %d: Ejecutando FLUSH %s:%s", query_id, archivo, tag);
-    
-    /*no lo tengo muy claro, pero seguro es porque se hace en memoria xd*/
-    t_paquete* paquete = crear_paquete(OP_FLUSH);
-    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
-    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
-    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+    log_info(logger, "## Query %d: Ejecutando FLUSH %s:%s",query_id, archivo, tag);
 
-    enviar_paquete(paquete, socket_storage);
-    eliminar_paquete(paquete);
+    qi_status_t st = ejecutar_FLUSH_memoria(archivo, tag, query_id);
 
-    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
-    if (respuesta == OK) {
+    if (st == QI_OK)
         log_info(logger, "## Query %d: FLUSH exitoso", query_id);
-        return QI_OK;
-    } else {
+    else
         log_error(logger, "## Query %d: Error en FLUSH", query_id);
-        return QI_ERR_PARSE;
-    }
-}
 
+    return st;
+}
 qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id) {
     log_info(logger, "## Query %d: Ejecutando DELETE %s:%s", query_id, archivo, tag);
 

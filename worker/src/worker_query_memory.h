@@ -41,6 +41,7 @@ extern int Tam_memoria; // Del worker
 extern int Retardo_reemplazo; // Del worker
 extern char * Algorit_Remplazo; // Del worker
 extern int socket_storage;
+extern int socket_master;
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina);
 void inicializar_paginas();
@@ -56,9 +57,9 @@ void proxima_victima(char * tag);
 void ocuapar_espacio(int victima,char * tag);
 
 
-qi_status_t ejercutar_WRITE(char * archivo,char * tag,int dir_base,char * contenido,int id_query);
-qi_status_t ejecutar_READ(char* archivo, char* tag, int direccion_base, int tamanio, int query_id);
-qi_status_t ejecutar_FLUSH(char* archivo, char* tag, int query_id);
+qi_status_t ejercutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido,int id_query);
+qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio, int query_id);
+qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag, int query_id);
 
 
 
