@@ -6,6 +6,7 @@ void Crear_file(char* archivo,char* tag, int query_id){
     log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag);
 }; 
 
+
 void Truncar_file(char* archivo, char* tag, int tamanio, int query_id) 
 {
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
@@ -38,35 +39,33 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
 
         if (tamanio > tamanio_actual) {
             int tamanio_diferencia = tamanio - tamanio_actual;
-            for (int i = 0; i < tamanio_diferencia; i++) {
-                int Siguiente_bit_libre = espacio_disponible(bitmap);
-                
-                if (Siguiente_bit_libre == -1) {
-                    log_error(logger, "Error, Espacio Insuficiente");
-                    break; 
-                } 
-                else {
-                    buscar_y_ocupar_siguiente_bit_libre(Siguiente_bit_libre);
-                    char *nombre_archivo = malloc(20);
-                    sprintf(nombre_archivo, "/block%04d", Siguiente_bit_libre);
-                    
-                    escribir_en_hash(nombre_archivo); 
-                    log_info(logger, "<%d> - Bloque Reservado: %d", query_id, Siguiente_bit_libre);
+            int contador_bloques = 0;
+            while(bloques_actuales[contador_bloques] != NULL) {
+                contador_bloques++;
+            }
 
-                    if (strlen(lista_final) > 1) { 
-                        string_append(&lista_final, ",");
-                    } 
-                    string_append_with_format(&lista_final, "%d", Siguiente_bit_libre);
-                    
-                    char* logical_blocks_archivo_tagi = malloc(strlen(archivo_tag) + 50);
-                    sprintf(logical_blocks_archivo_tagi, "%s/logical_blocks/%06d.dat", archivo_tag, Siguiente_bit_libre);
-                    char* bloque_archivo = malloc(strlen(archivo_tag) + strlen(nombre_archivo));
-                    sprintf(bloque_archivo, "%s%s.dat", dir_physical_blocks, nombre_archivo);
-                    link(bloque_archivo,logical_blocks_archivo_tagi);
-                    log_info(logger, "<%d> - <%s>:<%s> Se agregó el hard link del bloque lógico <%s> al bloque físico <%s>", query_id,archivo,tag,logical_blocks_archivo_tagi,bloque_archivo);
-                    free(logical_blocks_archivo_tagi);
-                    free(nombre_archivo); 
-                }
+            for (int i = 0; i < tamanio_diferencia; i++) {
+                
+                int bloque_reservado = 0; 
+                int numero_nuevo_bloque = contador_bloques + i;
+
+                if (strlen(lista_final) > 1) { 
+                    string_append(&lista_final, ",");
+                } 
+                string_append_with_format(&lista_final, "%d", bloque_reservado);
+                
+                char* logical_blocks_archivo_tagi = malloc(strlen(archivo_tag) + 50);
+                sprintf(logical_blocks_archivo_tagi, "%s/logical_blocks/%06d.dat", archivo_tag, numero_nuevo_bloque);
+                
+                char* bloque_archivo = malloc(strlen(dir_physical_blocks) + 20);
+                sprintf(bloque_archivo, "%s/block%04d.dat", dir_physical_blocks, bloque_reservado);
+                
+                link(bloque_archivo, logical_blocks_archivo_tagi);
+                
+                log_info(logger, "<%d> - <%s>:<%s> Se agregó el hard link del bloque lógico <%s> al bloque físico <%s>", query_id, archivo, tag, logical_blocks_archivo_tagi, bloque_archivo);
+                
+                free(logical_blocks_archivo_tagi);
+                free(bloque_archivo);
             }
             
         } else if (tamanio < tamanio_actual) { 
@@ -90,15 +89,24 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
                     }
                     string_append(&lista_final, bloques_actuales[i]);
                 } else {
-                    bitarray_clean_bit(bitmap, bloque_id);
-                    
                     char* logical_blocks_archivo_tagi = malloc(strlen(archivo_tag) + 50);
-                    sprintf(logical_blocks_archivo_tagi, "%s/logical_blocks/%06d.dat", archivo_tag, bloque_id);
-                    
+                    sprintf(logical_blocks_archivo_tagi, "%s/logical_blocks/%06d.dat", archivo_tag, bloque_id); // Acá usamos el ID real del bloque que se borra
                     unlink(logical_blocks_archivo_tagi);
-                    log_info(logger, "<%d> - Bloque Liberado: %d", query_id, bloque_id);
-                    
                     free(logical_blocks_archivo_tagi);
+
+                    char* bloque_fisico_path = malloc(strlen(dir_physical_blocks) + 20);
+                    sprintf(bloque_fisico_path, "%s/block%04d.dat", dir_physical_blocks, bloque_id);
+                    
+                    struct stat st;
+                    if (stat(bloque_fisico_path, &st) == 0) {
+                        if (st.st_nlink == 1) {
+                            bitarray_clean_bit(bitmap, bloque_id);
+                            log_info(logger, "<%d> - Bloque Liberado (Nlink=1): %d", query_id, bloque_id);
+                        } else {
+                            log_info(logger, "<%d> - Bloque NO Liberado (Compartido): %d", query_id, bloque_id);
+                        }
+                    }
+                    free(bloque_fisico_path);
                 }
             }
         }
@@ -116,6 +124,7 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
         log_info(logger, "<%d> - File Truncado <%s>:<%s> - Tamaño: <%d>", query_id, archivo, tag, tamanio);
     }
 }
+
 
 void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int query_id){
     char* logical_blocks_archivo_tag; 
