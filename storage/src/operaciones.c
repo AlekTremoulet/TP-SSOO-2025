@@ -89,11 +89,15 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
                     }
                     string_append(&lista_final, bloques_actuales[i]);
                 } else {
+                    // CORRECCION: Usamos 'i' (la posición) para borrar el logical block
                     char* logical_blocks_archivo_tagi = malloc(strlen(archivo_tag) + 50);
-                    sprintf(logical_blocks_archivo_tagi, "%s/logical_blocks/%06d.dat", archivo_tag, bloque_id); // Acá usamos el ID real del bloque que se borra
-                    unlink(logical_blocks_archivo_tagi);
+                    sprintf(logical_blocks_archivo_tagi, "%s/logical_blocks/%06d.dat", archivo_tag, i); 
+                    
+                    unlink(logical_blocks_archivo_tagi); // Esto borra el archivo del array logical_blocks
+                    log_info(logger, "<%d> - Borrando hard link lógico: %s", query_id, logical_blocks_archivo_tagi);
                     free(logical_blocks_archivo_tagi);
 
+                    // Usamos 'bloque_id' (el valor) para chequear el bloque físico
                     char* bloque_fisico_path = malloc(strlen(dir_physical_blocks) + 20);
                     sprintf(bloque_fisico_path, "%s/block%04d.dat", dir_physical_blocks, bloque_id);
                     
@@ -124,7 +128,6 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
         log_info(logger, "<%d> - File Truncado <%s>:<%s> - Tamaño: <%d>", query_id, archivo, tag, tamanio);
     }
 }
-
 
 void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int query_id){
     char* logical_blocks_archivo_tag; 
