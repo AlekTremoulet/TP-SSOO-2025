@@ -23,12 +23,8 @@ int main(int argc, char* argv[]) {
     }
     Crear_file("archivo","tag",1);
     Truncar_file("archivo","tag",10,1);    
-    Escrbir_bloque("archivo","tag",1,"hola",3);
-    Escrbir_bloque("archivo","tag",1,"hola",3);
-    Truncar_file("archivo","tag",1,1); 
-    Escrbir_bloque("archivo","tag",1, "camboya",1);
-    Truncar_file("archivo","tag",5,1);
-    // Crear_tag("/home/utnso/storage/files/initial_file","/home/utnso/storage/files/initial_file2");
+    Escrbir_bloque("archivo","tag",5, "camboya",1);
+    Leer_bloque("archivo","tag",0,5,2);
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
