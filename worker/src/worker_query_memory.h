@@ -3,6 +3,10 @@
 
 #include <utils/utils.h>
 #include <worker_query_interpreter.h>
+#include <stdbool.h>
+#include <commons/collections/list.h>
+#include <commons/log.h>
+#include <stdint.h>
 
 #define PF
 
@@ -38,23 +42,23 @@ extern int Retardo_reemplazo; // Del worker
 extern char * Algorit_Remplazo; // Del worker
 extern int socket_storage;
 
+void inicializar_memoria_interna(int tam_total, int tam_pagina);
+void inicializar_paginas();
 
 
 void remplazar_pagina(char * tag);
-void init_paginas();
-void proxima_victima(char * tag);
+void liberar_memoria_interna();
+
+int seleccionar_victima();
+
 
 void proxima_victima(char * tag);
 void ocuapar_espacio(int victima,char * tag);
-int Clock_M();
-int Lru();
-int Especio_pagina();
+
+
 qi_status_t ejercutar_WRITE(char * archivo,char * tag,int dir_base,char * contenido,int id_query);
 qi_status_t ejecutar_READ(char* archivo, char* tag, int direccion_base, int tamanio, int query_id);
 qi_status_t ejecutar_FLUSH(char* archivo, char* tag, int query_id);
-
-static bool memoria_tiene_paginas_necesarias(int direccion_base, int cantidad_bytes);
-static void solicitar_paginas_a_storage(char *archivo, char *tag, int direccion_base, int cantidad_bytes);
 
 
 

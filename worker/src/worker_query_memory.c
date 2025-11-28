@@ -39,7 +39,7 @@ void inicializar_paginas(){
     log_info(logger, "Memoria inicializada: tam_total=%d tam_pagina=%d cant_marcos=%d",Memoria->tam_total, Memoria->tam_pagina, Memoria->cant_marcos);
 }
 
-void liberar_memoria_interna(void) {
+void liberar_memoria_interna() {
     if (!Memoria) 
         return;
     for (int i = 0; i < Memoria->cant_marcos; i++) {
@@ -62,7 +62,7 @@ static inline int offset_en_pagina(int direccion) {
 static int buscar_marco_por_pagina(const char* archivo, const char* tag, int nro_pagina) {
     for (int i = 0; i < Memoria->cant_marcos; i++) {
         if (Memoria->marcos[i].presente &&
-            Memoria->marcos[i].nro_pagina_log == nro_pagina &&
+            Memoria->marcos[i].nro_pag_logica == nro_pagina &&
             Memoria->marcos[i].archivo &&
             Memoria->marcos[i].tag &&
             strcmp(Memoria->marcos[i].archivo, archivo) == 0 &&
@@ -73,7 +73,7 @@ static int buscar_marco_por_pagina(const char* archivo, const char* tag, int nro
     return -1;
 }
 
-static int buscar_marco_libre(void) {
+static int buscar_marco_libre() {
     for (int i = 0; i < Memoria->cant_marcos; i++) {
         if (!Memoria->marcos[i].presente) 
             return i;
@@ -108,13 +108,6 @@ void ocuapar_espacio(int victima,char * tag){
 };
 */
 
-void seleccionar_victima(){
-    if (strcmp(Algorit_Remplazo, "LRU") == 0) 
-        return seleccionar_victima_LRU();
-    else 
-        return seleccionar_victima_CLOCK_M();
-    
-}
 
 /*
 int Especio_pagina(){ // Devuelve el espacio libre
@@ -137,7 +130,7 @@ int Cant_Especio_libre_pagina(){ // Devuelve el espacio libre
 }
 
 */
-static int seleccionar_victima_CLOCK_M(void) {
+static int seleccionar_victima_CLOCK_M() {
     int n = Memoria->cant_marcos;
 
     // Primera pasada: buscar (uso=0, modificado=0)
@@ -168,9 +161,9 @@ static int seleccionar_victima_CLOCK_M(void) {
 
     // Si después de limpiar todos los bits de uso no encontramos víctima,
     // significa que al reiniciar el algoritmo ahora sí encontraremos alguna.
-    return seleccionar_victima_clockm();
+    return seleccionar_victima_CLOCK_M();
 }
-int seleccionar_victima_LRU() { 
+static int seleccionar_victima_LRU() { 
     int min = 0;
     int min_timpo = Memoria->marcos[0].ult_usado;
     for (int i = 0; i < Memoria->cant_marcos; i++){
@@ -181,6 +174,17 @@ int seleccionar_victima_LRU() {
     }
     return min;
 };
+
+int seleccionar_victima(){
+    int marco = 0;
+    if (strcmp(Algorit_Remplazo, "LRU") == 0) 
+        marco = seleccionar_victima_LRU();
+    else 
+        marco = seleccionar_victima_CLOCK_M();
+    return marco;
+    
+}
+
 // escribe un marco en Storage si esta modificado 
 static bool enviar_marco_a_storage(int marco) {
     t_pagina* frame = &Memoria->marcos[marco];
@@ -194,7 +198,7 @@ static bool enviar_marco_a_storage(int marco) {
     t_paquete* paquete = crear_paquete(OP_FLUSH);
     agregar_a_paquete(paquete, frame->archivo, strlen(frame->archivo) + 1);
     agregar_a_paquete(paquete, frame->tag, strlen(frame->tag) + 1);
-    agregar_a_paquete(paquete, &frame->nro_pagina_log, sizeof(int));
+    agregar_a_paquete(paquete, &frame->nro_pag_logica, sizeof(int));
     agregar_a_paquete(paquete, &Memoria->tam_pagina, sizeof(int));
     agregar_a_paquete(paquete, frame->data, Memoria->tam_pagina);
 
@@ -204,7 +208,7 @@ static bool enviar_marco_a_storage(int marco) {
     protocolo_socket resp = recibir_paquete_ok(socket_storage);
     if (resp == OK) {
         frame->modificado = false;
-        log_debug(logger, "Marco %d (p.%d %s:%s) enviado a Storage y marcado limpio",marco, frame->nro_pagina_log, frame->archivo, frame->tag);
+        log_debug(logger, "Marco %d (p.%d %s:%s) enviado a Storage y marcado limpio",marco, frame->nro_pag_logica, frame->archivo, frame->tag);
         return true;
     } else {
         log_error(logger, "Error al enviar marco %d a Storage", marco);
@@ -236,7 +240,7 @@ static int cargar_pagina_en_marco(const char* archivo, const char* tag, int nro_
         Memoria->marcos[victima].archivo = NULL;
         Memoria->marcos[victima].tag = NULL;
         Memoria->marcos[victima].presente = false;
-        Memoria->marcos[victima].nro_pagina_log = -1;
+        Memoria->marcos[victima].nro_pag_logica = -1;
         Memoria->marcos[victima].uso = false;
         Memoria->marcos[victima].modificado = false;
         libre = victima;
@@ -266,11 +270,11 @@ static int cargar_pagina_en_marco(const char* archivo, const char* tag, int nro_
     // Setear metadata
     Memoria->marcos[libre].archivo = string_duplicate(archivo);
     Memoria->marcos[libre].tag = string_duplicate(tag);
-    Memoria->marcos[libre].nro_pagina_log = nro_pagina;
+    Memoria->marcos[libre].nro_pag_logica = nro_pagina;
     Memoria->marcos[libre].presente = true;
     Memoria->marcos[libre].uso = true;
     Memoria->marcos[libre].modificado = false;
-    Memoria->marcos[libre].last_used = Memoria->time_counter++;
+    Memoria->marcos[libre].ult_usado = Memoria->time_count++;
     log_debug(logger, "Pagina %d de %s:%s cargada en marco %d", nro_pagina, archivo, tag, libre);
 
     return libre;
@@ -390,6 +394,38 @@ qi_status_t ejecutar_READ(char* archivo, char* tag, int direccion_base, int tama
 
     log_info(logger, "## Query %d: READ completado: '%s' (%s:%s)", query_id, buffer, archivo, tag);
     free(buffer);
+    return QI_OK;
+}
+
+qi_status_t ejecutar_FLUSH_memoria(const char* archivo, const char* tag, int query_id) {
+    if (!Memoria) 
+        return QI_ERR_FILE;
+    if (!archivo || !tag) 
+        return QI_ERR_PARSE;
+
+    log_info(logger, "## Query %d: FLUSH iniciado para %s:%s", query_id, archivo, tag);
+
+    bool any_sent = false;
+    for (int i = 0; i < Memoria->cant_marcos; i++) {
+        t_pagina* f = &Memoria->marcos[i];
+        if (f->presente && f->modificado &&
+            f->archivo && f->tag &&
+            strcmp(f->archivo, archivo) == 0 &&
+            strcmp(f->tag, tag) == 0) {
+            // enviar marco i a Storage
+            if (!enviar_marco_a_storage(i)) {
+                log_error(logger, "## Query %d: Error enviando pagina %d durante FLUSH", query_id, f->nro_pag_logica);
+                return QI_ERR_STORAGE;
+            }
+            any_sent = true;
+        }
+    }
+
+    if (any_sent) {
+        log_info(logger, "## Query %d: FLUSH completado exitosamente (%s:%s)", query_id, archivo, tag);
+    } else {
+        log_info(logger, "## Query %d: FLUSH: no habia paginas modificadas para %s:%s", query_id, archivo, tag);
+    }
     return QI_OK;
 }
 /*

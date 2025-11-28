@@ -21,11 +21,10 @@ extern int flag_desalojo;
 extern pthread_mutex_t * mutex_flag_desalojo;
 
 
-static t_instruccion obtener_instruccion(const char* texto);
-static inline void quitar_salto_de_linea(char* cadena);
-static void liberar_string_split(char** array);
+
+
 qi_status_t obtener_instruccion_y_args(void* parametros_worker, const char* linea, int query_id);
-static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out);
+
 void ejecutar_query(const char* path_query, int query_id);
 qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int query_id);
 qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id);
@@ -36,8 +35,6 @@ qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* t
 qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id);
 qi_status_t ejecutar_FLUSH(char* archivo, char* tag, int query_id);
 qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id);
-static qi_status_t exec_CREATE(int qid, char* cadena);
-static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out);
 
 void loop_principal();
 

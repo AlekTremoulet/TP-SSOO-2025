@@ -146,6 +146,6 @@ void parametros_storage(int socket_storage){
         tam_pagina =  *(int*) list_remove(paquete_recv, 0); 
         log_debug(logger, "Parametros Storage:  <%d>",tam_pagina);
 
-        init_paginas();
+        inicializar_memoria_interna(Tam_memoria,tam_pagina);
     }
 };
