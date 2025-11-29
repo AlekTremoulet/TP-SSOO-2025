@@ -249,7 +249,7 @@ void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int
     }
 }
 
-char* Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query_id){
+char* Leer_bloque(char* archivo, char* tag, int dir_base, int query_id){
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
     sprintf(metadata_config_asociado, "%s/%s/%s/metadata.config", dir_files, archivo, tag);
 
@@ -296,6 +296,7 @@ char* Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query
         
         fclose(f_bloque);
         log_info(logger,"<%d> - Bloque Lógico Leído <%s>:<%s> - Número de Bloque Físico: <%d>", query_id, archivo, tag, bloque_fisico_actual);
+        log_debug(logger,"Data: leida <%s>", buffer_contenido);
     } else {
         log_error(logger, "Error: No se pudo abrir el archivo físico %s", path_bloque_fisico);
     }

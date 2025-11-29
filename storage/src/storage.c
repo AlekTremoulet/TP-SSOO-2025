@@ -21,11 +21,13 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < block_count; i++) {
         inicializar_bloque_fisico(i);
     }
+    //----------------------------- HAY QUE MATARLO 
     Crear_file("archivo","tag",1);
     Truncar_file("archivo","tag",10,1);    
     Escrbir_bloque("archivo","tag",5, "camboya",1);
-    Leer_bloque("archivo","tag",0,5,2);
-    Eliminar_tag("archivo", "tag", 12);
+    Leer_bloque("archivo","tag",5,2); //(char* archivo, char* tag, int dir_base, int tamanio, int query_id)
+    // Eliminar_tag("archivo", "tag", 12);
+    //--------------------------------------
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -124,7 +126,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             dir_base = list_remove(paquete_recv, 0);
             tamanio = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Leer_bloque(archivo,tag,dir_base,tamanio,query_id);
+            Leer_bloque(archivo,tag,dir_base,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_TAG:
