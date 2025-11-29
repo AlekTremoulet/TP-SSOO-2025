@@ -5,7 +5,7 @@ int block_size = 0;
 int mem_delay_ms = 0;
 extern int socket_storage;
 extern int socket_master;
-extern bool flag_COMMIT == false;
+
 
 int program_counter;
 int query_id;
@@ -230,7 +230,7 @@ void ejecutar_query(const char* path_query, int query_id) {
     //este while no deberia esta, asi solo lee una linea. El file read se puede hacer en otro lado (loop_principal()? y recorrer las lineas en un char* usando el program counter)
     while ((read = getline(&linea, &len, arch_inst)) != -1) {
         quitar_salto_de_linea(linea);
-
+        agregar getline a una lista
         log_info(logger, "## Query %d: FETCH - Program Counter: %d - %s", query_id, program_counter, linea);
 
         qi_status_t st = obtener_instruccion_y_args(NULL, linea, query_id);
@@ -273,31 +273,40 @@ qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id) {
         return QI_OK;
     } else {
         log_error(logger, "## Query %d: Error en CREATE", query_id);
-        return QI_ERR_PARSE;
+        return QI_ERR_STORAGE;
     }
 }
 
-qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio, int query_id) {
-    log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", query_id, archivo, tag, tamanio);
+qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int nuevo_tamanio, int query_id) {
+log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", query_id, archivo, tag, nuevo_tamanio);
 
-    
+    // Validar COMMIT
+    if (hubo_COMMIT_no_se_puede_WRITE(archivo, tag)) {
+        log_error(logger,"## Query %d: TRUNCATE prohibido: %s:%s tiene COMMIT",query_id, archivo, tag);
+        return QI_ERR_COMMIT_CERRADO;
+    }
+
     t_paquete* paquete = crear_paquete(OP_TRUNCATE);
-    agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
-    agregar_a_paquete(paquete, tag, strlen(tag) + 1);
-    agregar_a_paquete(paquete, &tamanio, sizeof(int));
-    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+    agregar_a_paquete(paquete, archivo, strlen(archivo)+1);
+    agregar_a_paquete(paquete, tag, strlen(tag)+1);
+    agregar_a_paquete(paquete, &nuevo_tamanio, sizeof(int));
+    agregar_a_paquete(paquete, &query_id, sizeof(int));
 
     enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
-    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
-    if (respuesta == OK) {
-        log_info(logger, "## Query %d: TRUNCATE exitoso", query_id);
-        return QI_OK;
-    } else {
-        log_error(logger, "## Query %d: Error en TRUNCATE", query_id);
-        return QI_ERR_PARSE;
+    protocolo_socket resp = recibir_paquete_ok(socket_storage);
+    if (resp != OK) {
+        log_error(logger,"## Query %d: Storage rechazó TRUNCATE %s:%s",query_id, archivo, tag);
+        return QI_ERR_STORAGE;
     }
+
+    // TRUNCATE aceptado -> actualizar memoria
+    memoria_truncar(archivo, tag, nuevo_tamanio);
+
+    log_info(logger,"## Query %d: TRUNCATE %s:%s exitoso",query_id, archivo, tag);
+
+    return QI_OK;
 }
 
 qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido, int query_id)
@@ -333,27 +342,42 @@ qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio, i
 }
 
 qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* tag_dest, int query_id) {
-    memoria_actualizar_tag(arch_ori, tag_ori, arch_dest, tag_dest);
-    log_info(logger, "## Query %d: Ejecutando TAG %s:%s -> %s:%s", query_id, arch_ori, tag_ori, arch_dest, tag_dest);
+    //  Validar COMMIT destino
+    if (hubo_COMMIT_no_se_puede_WRITE(arch_dest, tag_dest)) {
+        log_error(logger,"## Query %d: TAG no permitido: destino %s:%s tiene COMMIT", query_id, arch_dest, tag_dest);
+        return QI_ERR_COMMIT_CERRADO;
+    }
+
+    // Si origen tiene commit, marcar commit en destino (a nivel lógico)
+    bool origen_comiteado = hubo_COMMIT_no_se_puede_WRITE(arch_ori, tag_ori);
 
     t_paquete* paquete = crear_paquete(OP_TAG);
-    agregar_a_paquete(paquete, arch_ori, strlen(arch_ori) + 1);
-    agregar_a_paquete(paquete, tag_ori, strlen(tag_ori) + 1);
-    agregar_a_paquete(paquete, arch_dest, strlen(arch_dest) + 1);
-    agregar_a_paquete(paquete, tag_dest, strlen(tag_dest) + 1);
-    agregar_a_paquete(paquete, &(query_id), sizeof(int));
+    agregar_a_paquete(paquete, arch_ori, strlen(arch_ori)+1);
+    agregar_a_paquete(paquete, tag_ori,  strlen(tag_ori)+1);
+    agregar_a_paquete(paquete, arch_dest, strlen(arch_dest)+1);
+    agregar_a_paquete(paquete, tag_dest,  strlen(tag_dest)+1);
+    agregar_a_paquete(paquete, &query_id, sizeof(int));
 
     enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
-    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
-    if (respuesta == OK) {
-        log_info(logger, "## Query %d: TAG exitoso", query_id);
-        return QI_OK;
-    } else {
-        log_error(logger, "## Query %d: Error en TAG", query_id);
-        return QI_ERR_PARSE;
+    protocolo_socket r = recibir_paquete_ok(socket_storage);
+
+    if (r != OK) {
+        log_error(logger, "## Query %d: Storage rechazó TAG", query_id);
+        return QI_ERR_STORAGE;
     }
+
+    memoria_actualizar_tag(arch_ori, tag_ori, arch_dest, tag_dest);
+
+    // Mover commit origen -> destino
+    if (origen_comiteado) {
+        memoria_eliminar_commit(arch_ori, tag_ori);
+        memoria_agregar_commit(arch_dest, tag_dest);
+    }
+
+    log_info(logger, "## Query %d: TAG exitoso", query_id);
+    return QI_OK;
 }
 
 qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id) {
@@ -373,10 +397,10 @@ qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id) {
     enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
-    flag_COMMIT == true;
     
     protocolo_socket resp = recibir_paquete_ok(socket_storage);
     if (resp == OK) {
+        memoria_agregar_commit(archivo, tag);
         log_info(logger, "## Query %d: COMMIT exitoso", query_id);
         return QI_OK;
     }
@@ -409,12 +433,16 @@ qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id) {
     enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
+
+
     protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
     if (respuesta == OK) {
         log_info(logger, "## Query %d: DELETE exitoso", query_id);
+        memoria_invalidar_file_tag_completo(archivo, tag);
         return QI_OK;
     } else {
         log_error(logger, "## Query %d: Error en DELETE", query_id);
         return QI_ERR_PARSE;
     }
+
 }
