@@ -20,6 +20,13 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < block_count; i++) {
         inicializar_bloque_fisico(i);
     }
+    //-hardcodeado para probar
+    Crear_file("archivo","tag",1);
+    Truncar_file("archivo","tag",10,1);    
+    Escrbir_bloque("archivo","tag",5, "camboya",1);
+    Leer_bloque("archivo","tag",5,2);
+    // Eliminar_tag("archivo", "tag", 12);
+    //-hardcodeado para probar
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -112,7 +119,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             query_id = *(int*) list_remove(paquete_recv, 0);
             Escrbir_bloque(archivo,tag,dir_base,contenido,query_id);
             enviar_paquete_ok(socket_nuevo);
-            esperar(retardo_operacion+retardo_bloque);
+            esperar(retardo_bloque);
             break;
         case OP_READ:
             paquete_recv = recibir_paquete(socket_nuevo);
@@ -123,7 +130,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             query_id = *(int*) list_remove(paquete_recv, 0);
             Leer_bloque(archivo,tag,dir_base,query_id);
             enviar_paquete_ok(socket_nuevo);
-            esperar(retardo_operacion+retardo_bloque);
+            esperar(retardo_bloque);
             break;
         case OP_TAG:
             paquete_recv = recibir_paquete(socket_nuevo);
