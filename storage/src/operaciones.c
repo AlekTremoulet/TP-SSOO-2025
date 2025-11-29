@@ -343,6 +343,7 @@ void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int
         free(path_bloque_fisico);
         config_destroy(config_a_escribir);
         free(metadata_config_asociado);
+        
     }
 }
 
@@ -490,3 +491,7 @@ void Commit_tag(char* archivo, char* tag, int query_id){
     free(ruta_archivo);
     log_info(logger,"<%d> - Commit de File:Tag <%s>:<%s>",query_id,archivo,tag);
 }; 
+
+void esperar(int milisegundos){
+    usleep(milisegundos*1000);
+}

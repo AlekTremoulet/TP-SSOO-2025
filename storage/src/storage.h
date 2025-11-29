@@ -12,6 +12,8 @@ t_log_level current_log_level;
 char * puerto;
 char * fresh_start;
 char * punto_montaje;
+int retardo_operacion;
+int retardo_bloque;
 char * dir_physical_blocks;
 char * dir_files;
 char * path_hash;
