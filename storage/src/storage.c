@@ -39,6 +39,8 @@ void levantarConfig(){
     logger = log_create("storage.log", "STORAGE", 1, current_log_level);
     fresh_start = config_get_string_value(config, "FRESH_START");
     punto_montaje = config_get_string_value(config, "PUNTO_MONTAJE");
+    retardo_operacion = config_get_int_value(config, "RETARDO_OPERACION");
+    retardo_bloque = config_get_int_value(config, "RETARDO_ACCESO_BLOQUE");
 
     dir_files = malloc(strlen(punto_montaje) + strlen("/files") + 1);
     sprintf(dir_files, "%s/files", punto_montaje);
@@ -110,6 +112,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             query_id = *(int*) list_remove(paquete_recv, 0);
             Escrbir_bloque(archivo,tag,dir_base,contenido,query_id);
             enviar_paquete_ok(socket_nuevo);
+            esperar(retardo_operacion+retardo_bloque);
             break;
         case OP_READ:
             paquete_recv = recibir_paquete(socket_nuevo);
@@ -120,6 +123,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             query_id = *(int*) list_remove(paquete_recv, 0);
             Leer_bloque(archivo,tag,dir_base,query_id);
             enviar_paquete_ok(socket_nuevo);
+            esperar(retardo_operacion+retardo_bloque);
             break;
         case OP_TAG:
             paquete_recv = recibir_paquete(socket_nuevo);
@@ -162,7 +166,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             return (void *)EXIT_FAILURE;
             break;
         }
-
+        esperar(retardo_operacion);
            
     }
     return (void *)EXIT_SUCCESS;
