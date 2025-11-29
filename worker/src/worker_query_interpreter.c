@@ -8,6 +8,8 @@ extern int socket_master;
 extern bool flag_COMMIT == false;
 
 int program_counter;
+int query_id;
+char * query_path;
 
 extern pthread_mutex_t * mutex_flag_desalojo;
 
@@ -190,44 +192,23 @@ void setear_desalojo_flag(int value){
 
 void loop_principal(){
     protocolo_socket cod_op;
+    int flag_fin_query = false;
 
     mutex_flag_desalojo = inicializarMutex();
 
+    //hay que modificar ejecutar query para que corra de a una linea, dandonos la oporturnidad de chequear si hay desalojo desde master
     while(1){
-         cod_op = recibir_operacion(socket_master);
-
-        t_list * paquete_recv;
-
-        switch (cod_op)
-        {
-        case EXEC_QUERY:
-            paquete_recv = recibir_paquete(socket_master);
-            //hay que crear una global o guardarlo en algun lado
-            int query_id = *(int *) list_remove(paquete_recv, 0);
-            char * query_path = list_remove(paquete_recv, 0);
-            program_counter = *(int *) list_remove(paquete_recv, 0);
-
-            //hay que modificar ejecutar query para que corra de a una linea, dandonos la oporturnidad de chequear si hay desalojo desde master
-            while(!obtener_desalojo_flag()){
-                ejecutar_query(query_path, query_id);
-            }if (obtener_desalojo_flag()){
-                memoria_flush_global(query_id);
-                //llamo a una funcion que atienda el desalojo, o escribir aca mismo. Hay que darle el PC a master
-                //seteo el flag en false
-                setear_desalojo_flag(false);
-                //sigo con mi vida
-            }
-            
-
+        if (obtener_desalojo_flag()){
+            memoria_flush_global(query_id);
+            //llamo a una funcion que atienda el desalojo, o escribir aca mismo. Hay que darle el PC a master
+            //seteo el flag en false
+            setear_desalojo_flag(false);
             break;
-        
-        case QUERY_FINALIZACION:
-
-            //retorna ok a master
-
+            //sigo con mi vida
+        }if(flag_fin_query){
             break;
-
         }
+        ejecutar_query(query_path, query_id);
     }
 
    

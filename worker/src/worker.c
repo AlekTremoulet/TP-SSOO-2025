@@ -1,5 +1,9 @@
 #include <worker.h>
 
+extern int query_id;
+extern char * query_path;
+extern int program_counter;
+
 int main(int argc, char* argv[]) {
 
     if (argc < 3){
@@ -113,6 +117,31 @@ void *conexion_cliente_master(void *args){
     t_paquete *paquete_send = crear_paquete(PARAMETROS_WORKER);
     agregar_a_paquete(paquete_send, &(parametros_a_enviar.id), sizeof(int));
     enviar_paquete(paquete_send, socket_master);
+
+    while(1){
+        int cod_op = recibir_operacion(socket_master);
+
+        t_list * paquete_recv;
+
+        switch (cod_op)
+        {
+        case EXEC_QUERY:
+            paquete_recv = recibir_paquete(socket_master);
+            //hay que crear una global o guardarlo en algun lado
+            query_id = *(int *) list_remove(paquete_recv, 0);
+            query_path = list_remove(paquete_recv, 0);
+            program_counter = *(int *) list_remove(paquete_recv, 0);         
+
+            break;
+        
+        case QUERY_FINALIZACION:
+
+            enviar_paquete_ok(socket_master);
+
+            break;
+
+        }
+    }
     
     return (void *)EXIT_SUCCESS;
 }
