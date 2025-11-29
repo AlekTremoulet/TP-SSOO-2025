@@ -22,7 +22,7 @@ int socket_storage;
 
 char * Path_Queries;
 
-extern int Tam_memoria;
+int Tam_memoria;
 
 int tam_pagina = 1; //Del storage BLOCK_SIZE
 

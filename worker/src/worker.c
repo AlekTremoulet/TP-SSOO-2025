@@ -33,11 +33,11 @@ void inicializarWorker(){
     pthread_create(&tid_conexion_storage, NULL, conexion_cliente_storage, NULL);
     pthread_join(tid_conexion_storage, NULL);
 
-    pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
-    pthread_join(tid_conexion_master, NULL);
-
     pthread_create(&tid_desalojo_master, NULL, desalojo_check, NULL);
     pthread_detach(tid_desalojo_master);
+
+    pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
+    pthread_join(tid_conexion_master, NULL);
 
     loop_principal();
     

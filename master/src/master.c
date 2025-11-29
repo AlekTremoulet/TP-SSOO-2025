@@ -199,8 +199,7 @@ void *handler_cliente(void *arg) {
 
         case PARAMETROS_WORKER: {
             t_list *paquete_recv = recibir_paquete(socket_nuevo);
-            int *id_ptr = list_remove(paquete_recv, 0);
-            int worker_id = *id_ptr;
+            int worker_id = *(int *)list_remove(paquete_recv, 0);
 
             enviar_paquete_ok(socket_nuevo);
 
@@ -240,6 +239,25 @@ void *handler_cliente(void *arg) {
 
     // el socket queda abierto: lo necesito para hablar con el Query/Worker.
     return NULL;
+}
+
+worker_t * buscar_worker_por_id(int id, list_struct_t * cola){
+
+    pthread_mutex_lock(cola->mutex);
+
+    worker_t * aux;
+    t_list_iterator * iterator = list_iterator_create(cola->lista);
+
+    while (list_iterator_has_next(iterator)){
+        aux = list_iterator_next(iterator);
+        if (aux->id == id){
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(cola->mutex);
+
+    return aux;
 }
 
 void encolar_worker(list_struct_t *cola, worker_t *w, int index){

@@ -43,5 +43,6 @@ void planificador_fifo();
 void planificador_prioridades();
 void *planificador(void * args);
 void *hilo_worker_query(void *arg);
+worker_t * buscar_worker_por_id(int id, list_struct_t * cola);
 
 #endif

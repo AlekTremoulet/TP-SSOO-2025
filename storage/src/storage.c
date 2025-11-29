@@ -20,13 +20,6 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < block_count; i++) {
         inicializar_bloque_fisico(i);
     }
-    //----------------------------- HAY QUE MATARLO 
-    Crear_file("archivo","tag",1);
-    Truncar_file("archivo","tag",10,1);    
-    Escrbir_bloque("archivo","tag",5, "camboya",1);
-    Leer_bloque("archivo","tag",5,2); //(char* archivo, char* tag, int dir_base, int tamanio, int query_id)
-    // Eliminar_tag("archivo", "tag", 12);
-    //--------------------------------------
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
