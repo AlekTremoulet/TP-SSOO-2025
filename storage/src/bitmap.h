@@ -1,13 +1,20 @@
 #ifndef BITMAP_H
 #define BITMAP_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
-#include <commons/bitarray.h>
-#include <commons/log.h>
 #include <utils/utils.h>
+#include <commons/log.h>
+#include <commons/config.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <commons/crypto.h>
+#include <commons/bitarray.h>
+
+#include <pthread.h>
 #include <math.h>
 
 extern char * punto_montaje;
@@ -15,13 +22,9 @@ extern int tam_fs;
 extern int tam_bloque;
 extern int block_count;
 
-t_bitarray* bitmap;
-static FILE* bitmap_file;
+
 extern t_log *logger;
 
-int libres = 0;
-
-uint32_t bits_ocupados;
 extern char *path_bitmap;
 
 typedef struct {
@@ -32,12 +35,11 @@ typedef struct {
 
 
 
-void inicializar_bitmap();
 int espacio_disponible(t_bitarray * bitmap);
 int ocupar_espacio_bitmap(int offset_bit);
 int liberar_espacio_bitmap(int offset_bit);
 void destruir_bitmap();
 char *cargar_ruta(char *ruta_al_archivo);
-void buscar_y_ocupar_siguiente_bit_libre();
+void buscar_y_ocupar_siguiente_bit_libre(int siguiente_bit_libre);
 
 #endif

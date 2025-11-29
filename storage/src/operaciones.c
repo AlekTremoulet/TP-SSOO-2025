@@ -1,11 +1,108 @@
 #include "operaciones.h"
 
+char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
+    t_archivo_creado archivo;
+    archivo.nombre = nombre_archivo;
+    archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
+    sprintf(archivo.ruta_base, "%s/%s", dir_files,nombre_archivo);
+
+    archivo.ruta_tag= malloc(strlen(archivo.ruta_base) + strlen("/") + strlen(tag_archivo)+ 1); //NO SE DONDE IRIA UN FREE
+    sprintf(archivo.ruta_tag, "%s/%s", archivo.ruta_base,tag_archivo);
+
+    char* directorio_base = crear_directorio(archivo.ruta_base);
+    char* directorio_tag = crear_directorio(archivo.ruta_tag);
+    log_info(logger,"La ruta base de %s es %s",archivo.nombre,archivo.ruta_base);
+    log_info(logger,"La ruta al tag es%s ",archivo.ruta_tag);
+
+    char *config_asociada = malloc(strlen(directorio_tag) + strlen("/metadata.config") + 1); //NO SE DONDE IRIA UN FREE
+    sprintf(config_asociada, "%s/%s", directorio_tag,"metadata.config");
+
+    char *directorio_config_asociada = cargar_archivo("",config_asociada);
+    log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
+
+    char *Estado = "WORK IN PROGRESS";
+    char *Blocks = "[]";
+    char *Tamanio = "0";
+
+    t_config *config_archivo_metadata = config_create(directorio_config_asociada);
+
+    if (!config_archivo_metadata) {
+        FILE *temp_file = fopen(directorio_config_asociada, "w");
+        if (temp_file) {
+            fclose(temp_file);
+            config_archivo_metadata = config_create(directorio_config_asociada); 
+        }
+
+        if (!config_archivo_metadata) { 
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    config_set_value(config_archivo_metadata, "ESTADO", Estado);
+    config_set_value(config_archivo_metadata, "Blocks", Blocks);
+    config_set_value(config_archivo_metadata, "Tamanio", Tamanio);
+
+    if (config_save(config_archivo_metadata) == -1) {
+        log_error(logger, "Error al guardar los datos en el .config: %s", directorio_config_asociada);
+    }
+    
+    
+    char *dir_logical_blocks = malloc(strlen(directorio_tag) + strlen("/logical_blocks") + 1);
+    sprintf(dir_logical_blocks, "%s/%s", directorio_tag,"logical_blocks");
+    crear_directorio(dir_logical_blocks);
+
+    return dir_logical_blocks;
+}
+
+char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo){ 
+    size_t path_length = strlen(ruta_base) + strlen(ruta_al_archivo) + 2;
+    char *path_creado = malloc(path_length);
+    if (!path_creado) {
+        log_info(logger, "Error: No se pudo asignar memoria para crear el archivo");
+        exit(EXIT_FAILURE);
+    }
+    
+    if (!strcmp(ruta_base, "/")!= 0) {
+        snprintf(path_creado, path_length, "%s/%s", ruta_base,ruta_al_archivo);
+    } else {
+        snprintf(path_creado, path_length, "%s%s", ruta_base,ruta_al_archivo);
+    }
+    log_debug(logger, "Ruta del archivo: %s", path_creado);
+    log_debug(logger, "archivo %s inicializado correctamente.",path_creado);
+
+    return path_creado;
+}
+
+char* crear_directorio(char* path_a_crear) {
+    if (!path_a_crear) {
+        log_error(logger, "Error: La ruta base es NULL.\n");
+        return NULL;
+    }
+
+    char* ruta = strdup(path_a_crear);
+    if (!ruta) {
+        log_error(logger, "Error: No se pudo asignar memoria para la ruta del directorio.\n");
+        return NULL;
+    }
+
+    if (mkdir(ruta, 0700) == 0) {
+        log_debug(logger,"Directorio '%s' creado correctamente.\n", ruta);
+    } else if (errno == EEXIST) {
+        log_debug(logger,"El directorio '%s' ya existe.\n", ruta);
+    } else {
+        log_error(logger,"Error al crear el directorio");
+        free(ruta);
+        return NULL;
+    }
+
+    return ruta;
+}
+
 
 void Crear_file(char* archivo,char* tag, int query_id){
     crear_archivo_en_FS(archivo, tag);
     log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag);
 }; 
-
 
 void Truncar_file(char* archivo, char* tag, int tamanio, int query_id) 
 {
@@ -248,6 +345,35 @@ void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int
         free(metadata_config_asociado);
     }
 }
+
+char *escribir_en_hash(char *nombre_bloque) {
+    t_config *hash_config = config_create(path_hash);
+
+    if (!hash_config) {
+        FILE *temp_file = fopen(path_hash, "w");
+        if (temp_file) {
+            fclose(temp_file);
+            hash_config = config_create(path_hash); 
+        }
+
+        if (!hash_config) { 
+            log_error(logger, "Error al crear/abrir blocks_hash_index.config en %s", path_hash);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    size_t longitud_bloque = strlen(nombre_bloque);
+    char *nombre_bloque_hash = crypto_md5(nombre_bloque, longitud_bloque); 
+    char *nombre_bloque_sin_prefijo = nombre_bloque + 1; 
+    config_set_value(hash_config, nombre_bloque_hash, nombre_bloque_sin_prefijo);
+
+    if (config_save(hash_config) == -1) {
+        log_error(logger, "Error al guardar los datos en blocks_hash_index.config");
+    }
+    config_destroy(hash_config);
+    return nombre_bloque_hash; 
+}
+
 
 char* Leer_bloque(char* archivo, char* tag, int dir_base, int query_id){
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);

@@ -1,20 +1,7 @@
 #ifndef OPERACIONES_H
 #define OPERACIONES_H
 
-
-#include <utils/utils.h>
-#include <commons/log.h>
-#include <commons/config.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <commons/crypto.h>
-#include <commons/bitarray.h>
-
+#include <bitmap.h>
 
 typedef enum {
     Inexistente,
@@ -23,6 +10,13 @@ typedef enum {
     Escritura_no_Permitida,
     Fuera_Limite
 } t_errores_Fs;
+typedef struct {
+    char * nombre;
+    char * hash;
+    char * ruta_base;
+    char * ruta_tag;
+} t_archivo_creado;
+
 
 typedef enum {
     WIP,
@@ -32,6 +26,8 @@ typedef enum {
 extern char * dir_files;
 extern t_bitarray* bitmap;
 extern char * dir_physical_blocks;
+
+extern char * path_hash;
 //Operaciones
 
 
@@ -42,9 +38,9 @@ char* Leer_bloque(char* archivo, char* tag, int dir_base, int query_id);
 void Eliminar_tag(char* archivo, char* tag, int query_id); 
 void Crear_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino, int query_id);
 void Commit_tag(char* archivo, char* tag, int query_id); 
-
-
-
-
+char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo);
+char* crear_directorio(char* path_a_crear);
+char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo);
+char *escribir_en_hash(char *nombre_bloque);
 
 #endif
