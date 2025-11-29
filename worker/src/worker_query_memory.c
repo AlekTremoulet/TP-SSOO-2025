@@ -9,6 +9,7 @@ extern int Retardo_reemplazo;
 t_list* filetag_commiteados;
 t_memoria* Memoria = NULL;
 
+
 void inicializar_memoria_interna(int tam_total, int tam_pagina_local){
     if (Memoria) 
         return;
@@ -201,7 +202,7 @@ static bool enviar_marco_a_storage(int marco) {
     }
 }
 
-static int cargar_pagina_en_marco(const char* archivo, const char* tag, int nro_pagina) {
+static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     int existe = buscar_marco_por_pagina(archivo, tag, nro_pagina);
     if (existe != -1) 
         return existe;
@@ -239,8 +240,10 @@ static int cargar_pagina_en_marco(const char* archivo, const char* tag, int nro_
     eliminar_paquete(paquete);
 
     int size_recv = 0;
-    void* buffer = recibir_buffer(socket_storage, &size_recv); 
-    if (!buffer || size_recv <= 0) {
+    protocolo_socket cod_op = recibir_operacion(socket_storage);
+    t_list* paquete_recv = recibir_paquete(socket_storage);
+    char * buffer = list_remove(paquete_recv,0);
+    if (!buffer) {
         log_error(logger, "Error recibiendo pagina %d de %s:%s desde Storage", nro_pagina, archivo, tag);
         if (buffer) 
             free(buffer);
@@ -287,7 +290,7 @@ static bool asegurar_paginas_cargadas(const char* archivo, const char* tag, int 
     return true;
 }
 
-void memoria_actualizar_tag(const char* arch_o, const char* tag_o,const char* arch_n, const char* tag_n)
+void memoria_actualizar_tag(char* arch_o, char* tag_o,char* arch_n, char* tag_n)
 {
     for (int i=0;i<Memoria->cant_marcos;i++) {
         t_pagina* p = &Memoria->marcos[i];
@@ -301,7 +304,7 @@ void memoria_actualizar_tag(const char* arch_o, const char* tag_o,const char* ar
             p->tag    = string_duplicate(tag_n);
         }
     }
-}
+} 
 
 
 void memoria_invalidar_file_tag_completo(const char* archivo, const char* tag) {
@@ -507,7 +510,7 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, 
     return QI_OK;
 }
 
-qi_status_t ejecutar_FLUSH_memoria(const char* archivo, const char* tag, int query_id) {
+qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag, int query_id) {
     if (!Memoria) 
         return QI_ERR_FILE;
     if (!archivo || !tag) 

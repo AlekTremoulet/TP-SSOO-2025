@@ -4,6 +4,8 @@ extern int query_id;
 extern char * query_path;
 extern int program_counter;
 
+void inicializar_memoria_interna(int tam_total, int tam_pagina);
+
 int main(int argc, char* argv[]) {
 
     if (argc < 3){

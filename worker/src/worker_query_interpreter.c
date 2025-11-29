@@ -6,6 +6,30 @@ int mem_delay_ms = 0;
 extern int socket_storage;
 extern int socket_master;
 
+qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido,int id_query);
+qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio, int query_id);
+qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag, int query_id);
+
+void inicializar_memoria_interna(int tam_total, int tam_pagina);
+void inicializar_paginas();
+
+void memoria_agregar_commit(const char* archivo, const char* tag);
+void liberar_memoria_interna();
+void memoria_invalidar_paginas_fuera_de_rango(const char* archivo, const char* tag, int nuevo_tamanio);
+
+int seleccionar_victima();
+
+
+void proxima_victima(char * tag);
+void ocuapar_espacio(int victima,char * tag);
+
+void memoria_actualizar_tag( char* arch_o,  char* tag_o, char* arch_n,  char* tag_n);
+void memoria_invalidar_file_tag_completo(const char* archivo, const char* tag);
+void memoria_eliminar_commit(const char* archivo, const char* tag);
+void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam);
+
+qi_status_t memoria_flush_global(int query_id);
+bool hubo_COMMIT_no_se_puede_WRITE(const char* archivo, const char* tag);
 
 int program_counter;
 int query_id;
@@ -41,7 +65,7 @@ static void liberar_string_split(char** array) {
     free(array);
 }
 
-qi_status_t obtener_instruccion_y_args(void* parametros_worker, const char* linea, int query_id) {
+qi_status_t obtener_instruccion_y_args(void* parametros_worker,  char* linea, int query_id) {
     if (!linea || strlen(linea) == 0)
         return QI_OK; //osea, si viene una linea vacia, que pase de largo. Tipo, ta bien
 
@@ -230,7 +254,7 @@ void ejecutar_query(const char* path_query, int query_id) {
     //este while no deberia esta, asi solo lee una linea. El file read se puede hacer en otro lado (loop_principal()? y recorrer las lineas en un char* usando el program counter)
     while ((read = getline(&linea, &len, arch_inst)) != -1) {
         quitar_salto_de_linea(linea);
-        agregar getline a una lista
+
         log_info(logger, "## Query %d: FETCH - Program Counter: %d - %s", query_id, program_counter, linea);
 
         qi_status_t st = obtener_instruccion_y_args(NULL, linea, query_id);

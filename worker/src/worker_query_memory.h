@@ -8,6 +8,7 @@
 #include <commons/log.h>
 #include <stdint.h>
 
+
 #define PF
 
 typedef struct {
@@ -36,6 +37,7 @@ typedef struct {
     char* tag;
 } t_commit;
 
+
 t_pagina * Mem_paginas;
 t_memoria * Memoria;
 
@@ -61,7 +63,7 @@ int seleccionar_victima();
 void proxima_victima(char * tag);
 void ocuapar_espacio(int victima,char * tag);
 
-void memoria_actualizar_tag(const char* arch_o, const char* tag_o,const char* arch_n, const char* tag_n);
+void memoria_actualizar_tag( char* arch_o,  char* tag_o, char* arch_n,  char* tag_n);
 void memoria_invalidar_file_tag_completo(const char* archivo, const char* tag);
 void memoria_eliminar_commit(const char* archivo, const char* tag);
 void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam);
@@ -71,6 +73,7 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char *
 qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio, int query_id);
 qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag, int query_id);
 
+qi_status_t memoria_flush_global(int query_id);
 bool hubo_COMMIT_no_se_puede_WRITE(const char* archivo, const char* tag);
 
 
