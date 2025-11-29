@@ -6,8 +6,7 @@ extern int tam_pagina;
 extern int Tam_memoria;
 extern char* Algorit_Remplazo;
 extern int Retardo_reemplazo;
-extern bool flag_COMMIT;
-
+t_list* filetag_commiteados;
 t_memoria* Memoria = NULL;
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina_local){
@@ -19,9 +18,11 @@ void inicializar_memoria_interna(int tam_total, int tam_pagina_local){
     Memoria->tam_pagina = tam_pagina_local;
     Memoria->cant_marcos = tam_total / tam_pagina_local;
     Memoria->clock_puntero = 0;
-    Memoria->time_count = 0;
+    Memoria->time_count = 0;   
+    filetag_commiteados = list_create(); 
     inicializar_paginas();
 }
+
 void inicializar_paginas(){
     Memoria->marcos = calloc(Memoria->cant_marcos, sizeof(t_pagina));
 
@@ -38,6 +39,22 @@ void inicializar_paginas(){
     }
 
     log_info(logger, "Memoria inicializada: tam_total=%d tam_pagina=%d cant_marcos=%d",Memoria->tam_total, Memoria->tam_pagina, Memoria->cant_marcos);
+}
+
+void memoria_agregar_commit(const char* archivo, const char* tag) {
+    for (int i = 0; i < list_size(filetag_commiteados); i++) {
+        t_commit* ft = list_get(filetag_commiteados, i);
+        if (strcmp(ft->archivo, archivo) == 0 && strcmp(ft->tag, tag) == 0)
+            return; 
+    }
+
+    t_commit* nuevo = malloc(sizeof(t_commit));
+    nuevo->archivo = strdup(archivo);
+    nuevo->tag = strdup(tag);
+
+    list_add(filetag_commiteados, nuevo);
+
+    log_info(logger,"Memoria: agregando COMMIT para %s:%s", archivo, tag);
 }
 
 void liberar_memoria_interna() {
@@ -67,18 +84,6 @@ void memoria_invalidar_paginas_fuera_de_rango(const char* archivo, const char* t
     }
 }
 
-void memoria_invalidar_tag_completo(archivo, tag){
-
-    for (int i=0; i<Memoria->cant_marcos; i++) {
-        t_pagina* p = &Memoria->marcos[i];
-        if (p->presente &&
-            strcmp(p->archivo, archivo)==0 &&
-            strcmp(p->tag, tag)==0 &&
-            p->nro_pag_logica >= ultima_pag_valida){
-                p->presente = false;
-            }
-    }
-}
 
 static inline int direccion_a_pagina(int direccion) {
     return direccion / Memoria->tam_pagina;
@@ -298,14 +303,101 @@ void memoria_actualizar_tag(const char* arch_o, const char* tag_o,const char* ar
     }
 }
 
+
+void memoria_invalidar_file_tag_completo(const char* archivo, const char* tag) {
+    memoria_eliminar_commit(archivo, tag);
+
+    for (int i = 0; i < Memoria->cant_marcos; i++) {
+        t_pagina* p = &Memoria->marcos[i];
+
+        if (!p->presente) continue;
+        if (!p->archivo || !p->tag) continue;
+
+        if (strcmp(p->archivo, archivo) == 0 && strcmp(p->tag, tag) == 0) {
+            free(p->archivo);
+            free(p->tag);
+
+            p->archivo       = NULL;
+            p->tag           = NULL;
+            p->presente      = false;
+            p->modificado    = false;
+            p->uso           = false;
+            p->ult_usado     = 0;
+            p->nro_pag_logica = -1;
+
+            memset(p->data, 0, Memoria->tam_pagina);
+
+        }
+    }
+    log_info(logger,"Memoria: invalidación total de %s:%s completada",archivo, tag);
+}
+
+
+void memoria_eliminar_commit(const char* archivo, const char* tag) {
+    for (int i = 0; i < list_size(filetag_commiteados);) {
+        t_commit* ft = list_get(filetag_commiteados, i);
+
+        if (strcmp(ft->archivo, archivo) == 0 && strcmp(ft->tag, tag) == 0) {
+            ft = list_remove(filetag_commiteados, i);
+
+            free(ft->archivo);
+            free(ft->tag);
+            free(ft);
+            continue; 
+        }
+        i++;
+    }
+    log_info(logger, "Memoria: eliminado COMMIT %s:%s (si existía)", archivo, tag);
+}
+
+void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam)
+{
+    int tam_pag = Memoria->tam_pagina;
+    int paginas_validas = (nuevo_tam + tam_pag - 1) / tam_pag;
+
+    for (int i = 0; i < Memoria->cant_marcos; i++) {
+
+        t_pagina* p = &Memoria->marcos[i];
+
+        if (!p->archivo) continue;
+        if (!p->archivo || !p->tag) continue;
+        if (strcmp(p->archivo, archivo) != 0) continue;
+        if (strcmp(p->tag, tag)!= 0) continue;
+
+        // Si esta página está por encima del nuevo tamaño -> invalidar
+        if (p->nro_pag_logica >= paginas_validas)
+        {
+            if (p->modificado)
+            {
+                if (!enviar_marco_a_storage(i))
+                    log_error(logger, "Error al flushear marco %d durante TRUNCATE", i);
+            }
+            free(p->archivo);
+            free(p->tag);
+            p->archivo       = NULL;
+            p->tag           = NULL;
+            p->presente      = false;
+            p->modificado    = false;
+            p->uso           = false;
+            p->ult_usado     = 0;
+            p->nro_pag_logica = -1;
+            memset(p->data, 0, Memoria->tam_pagina);
+        }
+    }
+    log_info(logger, "Memoria: TRUNCATE finalizado para %s:%s, nuevo tamaño=%d",archivo, tag, nuevo_tam);
+}
+
 qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,char * contenido,int id_query){
     if (!Memoria) 
         return QI_ERR_FILE;
     if (!archivo || !tag || !contenido) 
         return QI_ERR_PARSE;
-    int longitud = (int)strlen(contenido);
-    if (hubo_COMMIT_no_se_puede_WRITE(archivo, tag));
+    if (hubo_COMMIT_no_se_puede_WRITE(archivo, tag)){
+        log_error(logger, "WRITE rechazado: %s:%s ya tiene COMMIT", archivo, tag);
         return QI_ERR_COMMIT_CERRADO;
+    }
+
+    int longitud = (int)strlen(contenido);
     log_info(logger, "## Query %d: WRITE en Memoria %s:%s desde %d (%d bytes)", id_query, archivo, tag, direccion_base, longitud);
 
     if (direccion_base < 0 || direccion_base + longitud > Memoria->tam_total) {
@@ -333,7 +425,6 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,
         int a_escribir = (bytes_restantes <= espacio_en_pagina) ? bytes_restantes : espacio_en_pagina;
         memcpy((char*)Memoria->marcos[marco].data + offset, contenido + (longitud - bytes_restantes), a_escribir);
 
-        Memoria->marcos[marco].presente = true;
         Memoria->marcos[marco].modificado = true;
         Memoria->marcos[marco].uso = true;
         Memoria->marcos[marco].ult_usado = Memoria->time_count++;
@@ -346,8 +437,15 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,
     return QI_OK;
 }
 
-bool hubo_COMMIT_no_se_puede_WRITE(const char* arch, const char* tag) {
-    return flag_COMMIT;
+bool hubo_COMMIT_no_se_puede_WRITE(const char* archivo, const char* tag) {
+    for (int i = 0; i < list_size(filetag_commiteados); i++) {
+        t_commit* ft = list_get(filetag_commiteados, i);
+        if (strcmp(ft->archivo, archivo) == 0 &&
+            strcmp(ft->tag, tag) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio, int query_id) {
@@ -400,6 +498,7 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, 
     agregar_a_paquete(paquete, &direccion_base, sizeof(int));
     agregar_a_paquete(paquete, &tamanio, sizeof(int));
     agregar_a_paquete(paquete, &(query_id), sizeof(int));
+    agregar_a_paquete(paquete, buffer, tamanio + 1);
 
     enviar_paquete(paquete, socket_master);
 
@@ -456,7 +555,6 @@ qi_status_t memoria_flush_global(int query_id) { //cuando se desaloja limpia las
             }
         }
     }
-
     log_info(logger, "## Query %d: FLUSH GLOBAL completado", query_id);
     return QI_OK;
 }

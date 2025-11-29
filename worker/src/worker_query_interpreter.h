@@ -25,6 +25,11 @@ extern pthread_mutex_t * mutex_flag_desalojo;
 
 
 qi_status_t obtener_instruccion_y_args(void* parametros_worker, const char* linea, int query_id);
+qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int query_id);
+
+int obtener_desalojo_flag();
+void setear_desalojo_flag(int value);
+void loop_principal();
 
 void ejecutar_query(const char* path_query, int query_id);
 qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int query_id);
