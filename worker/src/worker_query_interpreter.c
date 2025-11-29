@@ -6,6 +6,7 @@ int mem_delay_ms = 0;
 extern int socket_storage;
 extern int socket_master;
 
+
 qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido,int id_query);
 qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio, int query_id);
 qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag, int query_id);
@@ -36,6 +37,8 @@ int query_id;
 char * query_path;
 
 extern pthread_mutex_t * mutex_flag_desalojo;
+extern sem_t * sem_hay_query;
+
 
 static t_instruccion obtener_instruccion(const char* texto) {
     if (strcmp(texto, "CREATE")   == 0) return CREATE;
@@ -222,17 +225,19 @@ void loop_principal(){
 
     //hay que modificar ejecutar query para que corra de a una linea, dandonos la oporturnidad de chequear si hay desalojo desde master
     while(1){
+        sem_wait(sem_hay_query);
         if (obtener_desalojo_flag()){
+
             memoria_flush_global(query_id);
-            //llamo a una funcion que atienda el desalojo, o escribir aca mismo. Hay que darle el PC a master
-            //seteo el flag en false
+            //aca va un semaforo que espera a que se envie el PC a master
+            //sem_desalojo_waiter
+
             setear_desalojo_flag(false);
-            break;
-            //sigo con mi vida
-        }if(flag_fin_query){
-            break;
-        }
-        ejecutar_query(query_path, query_id);
+
+        }else {
+            ejecutar_query(query_path, query_id);
+            sem_post(sem_hay_query);      
+        }  
     }
 
    

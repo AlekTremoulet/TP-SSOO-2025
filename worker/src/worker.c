@@ -3,6 +3,8 @@
 extern int query_id;
 extern char * query_path;
 extern int program_counter;
+sem_t * sem_hay_query;
+
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina);
 
@@ -30,14 +32,13 @@ void inicializarWorker(){
     pthread_t tid_conexion_storage;
     pthread_t tid_desalojo_master;
 
+    sem_hay_query = inicializarSem(0);
+
     pthread_create(&tid_conexion_storage, NULL, conexion_cliente_storage, NULL);
     pthread_join(tid_conexion_storage, NULL);
 
-    pthread_create(&tid_desalojo_master, NULL, desalojo_check, NULL);
-    pthread_detach(tid_desalojo_master);
-
     pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
-    pthread_join(tid_conexion_master, NULL);
+    pthread_detach(tid_conexion_master, NULL);
 
     loop_principal();
     
@@ -72,28 +73,6 @@ void levantarStorage(){
 
 }
 
-
-void *desalojo_check(void * args){
-
-    while(1){
-        protocolo_socket cod_op = recibir_operacion(socket_desalojo);
-
-        switch (cod_op)
-        {
-        case DESALOJO:
-            setear_desalojo_flag(true);
-            break;
-        
-        default:
-            log_error(logger, "operacion desconocida en desalojo_check");
-            break;
-        }
-    }
-    
-    return (void *)EXIT_SUCCESS;
-
-}
-
 void *conexion_cliente_master(void *args){
     
 	do
@@ -106,15 +85,6 @@ void *conexion_cliente_master(void *args){
 
     log_info(logger, "Conexión al Master exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master);
     log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", parametros_a_enviar.id);
-
-    do
-	{
-		socket_desalojo = crear_conexion(ip_master, puerto_master_desalojo);
-		sleep(1);
-        
-	}while(socket_master == -1);
-
-    log_info(logger, "Conexión al Master-desalojo exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master_desalojo);
 
     t_paquete *paquete_send = crear_paquete(PARAMETROS_WORKER);
     agregar_a_paquete(paquete_send, &(parametros_a_enviar.id), sizeof(int));
@@ -132,7 +102,15 @@ void *conexion_cliente_master(void *args){
             //hay que crear una global o guardarlo en algun lado
             query_id = *(int *) list_remove(paquete_recv, 0);
             query_path = list_remove(paquete_recv, 0);
-            program_counter = *(int *) list_remove(paquete_recv, 0);         
+            program_counter = *(int *) list_remove(paquete_recv, 0);
+
+            //aca guardamos el query entero en una t_list
+
+            t_list * lista_queries = list_create();
+
+            //while asdasd { list_add(lista_queries, char* del get line)}
+
+            sem_post(sem_hay_query);
 
             break;
         
@@ -141,6 +119,14 @@ void *conexion_cliente_master(void *args){
             enviar_paquete_ok(socket_master);
 
             break;
+
+        case DESALOJO;
+
+            // en master: cuando hay un desalojo, se manda el paquete con cod_op DESALOJO, master espera un PC, luego envia un nuevo paquete EXEC_QUERY
+
+            //enviar PC a master con cod_op DESALOJO
+            setear_desalojo_flag(false);
+            //sem_post al semaforo sem_desalojo_waiter
 
         }
     }
