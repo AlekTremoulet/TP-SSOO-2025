@@ -5,6 +5,7 @@ int block_size = 0;
 int mem_delay_ms = 0;
 extern int socket_storage;
 extern int socket_master;
+extern sem_t * sem_desalojo_waiter;
 
 
 qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido,int id_query);
@@ -38,6 +39,8 @@ char * query_path;
 
 extern pthread_mutex_t * mutex_flag_desalojo;
 extern sem_t * sem_hay_query;
+
+extern list_struct_t * lista_queries;
 
 
 static t_instruccion obtener_instruccion(const char* texto) {
@@ -229,8 +232,7 @@ void loop_principal(){
         if (obtener_desalojo_flag()){
 
             memoria_flush_global(query_id);
-            //aca va un semaforo que espera a que se envie el PC a master
-            //sem_desalojo_waiter
+            sem_wait(sem_desalojo_waiter);
 
             setear_desalojo_flag(false);
 
@@ -243,44 +245,43 @@ void loop_principal(){
    
 }
 
+char * obtener_instruccion_index(list_struct_t * lista_queries, int PC){
+    pthread_mutex_lock(lista_queries->mutex);
+
+    char * returnvalue = list_get(lista_queries->lista, PC);
+
+    pthread_mutex_unlock(lista_queries->mutex);
+
+    return returnvalue;
+}
+
 void ejecutar_query(const char* path_query, int query_id) {
-    FILE* arch_inst = fopen(path_query, "r");
-    if (!arch_inst) {
-        log_error(logger, "No se pudo abrir el archivo de Query: %s", path_query);
-        return;
-    }
 
-    log_info(logger, "## Query %d: Se recibe la Query. El path de operaciones es: %s", query_id, path_query);
-
-    char* linea = NULL;
+    char* linea = obtener_instruccion_index(lista_queries, program_counter);
     size_t len = 0;
     size_t read;
 
     //este while no deberia esta, asi solo lee una linea. El file read se puede hacer en otro lado (loop_principal()? y recorrer las lineas en un char* usando el program counter)
-    while ((read = getline(&linea, &len, arch_inst)) != -1) {
-        quitar_salto_de_linea(linea);
 
-        log_info(logger, "## Query %d: FETCH - Program Counter: %d - %s", query_id, program_counter, linea);
+    quitar_salto_de_linea(linea);
 
-        qi_status_t st = obtener_instruccion_y_args(NULL, linea, query_id);
+    log_info(logger, "## Query %d: FETCH - Program Counter: %d - %s", query_id, program_counter, linea);
 
-        log_info(logger, "## Query %d: - Instrucción realizada: %s", query_id, linea);
+    qi_status_t st = obtener_instruccion_y_args(NULL, linea, query_id);
 
-        if (st == QI_END) {
-            log_info(logger, "## Query %d: Query finalizada correctamente", query_id);
-            break;
-        }
+    log_info(logger, "## Query %d: - Instrucción realizada: %s", query_id, linea);
 
-        if (st == QI_ERR_PARSE) {
-            log_error(logger, "## Query %d: Error de parseo en línea %d", query_id, program_counter);
-            break;
-        }
-
-        program_counter++;
+    if (st == QI_END) {
+        log_info(logger, "## Query %d: Query finalizada correctamente", query_id);
     }
 
+    if (st == QI_ERR_PARSE) {
+        log_error(logger, "## Query %d: Error de parseo en línea %d", query_id, program_counter);
+    }
+
+    program_counter++;
+
     free(linea);
-    fclose(arch_inst);
 }
 
 qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id) {

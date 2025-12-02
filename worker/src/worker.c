@@ -4,6 +4,8 @@ extern int query_id;
 extern char * query_path;
 extern int program_counter;
 sem_t * sem_hay_query;
+sem_t * sem_desalojo_waiter;
+list_struct_t * lista_queries;
 
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina);
@@ -33,12 +35,15 @@ void inicializarWorker(){
     pthread_t tid_desalojo_master;
 
     sem_hay_query = inicializarSem(0);
+    sem_desalojo_waiter = inicializarSem(0);
+
+    lista_queries = inicializarLista();
 
     pthread_create(&tid_conexion_storage, NULL, conexion_cliente_storage, NULL);
     pthread_join(tid_conexion_storage, NULL);
 
     pthread_create(&tid_conexion_master, NULL, conexion_cliente_master, NULL);
-    pthread_detach(tid_conexion_master, NULL);
+    pthread_detach(tid_conexion_master);
 
     loop_principal();
     
@@ -106,27 +111,72 @@ void *conexion_cliente_master(void *args){
 
             //aca guardamos el query entero en una t_list
 
-            t_list * lista_queries = list_create();
+            pthread_mutex_lock(lista_queries->mutex);
+            list_destroy_and_destroy_elements(lista_queries->lista, free);
+            lista_queries->lista = list_create();
 
-            //while asdasd { list_add(lista_queries, char* del get line)}
+            char * temp_query_path = malloc(strlen(query_path)+strlen(Path_Queries)+1);
+            strcpy(temp_query_path, Path_Queries);
+            strcat(temp_query_path, "/");
+            strcat(temp_query_path, query_path);
 
+            FILE *fp = fopen(temp_query_path, "r");
+            if (!fp)
+            {
+                perror("Error opening file");
+                return NULL;
+            }
+            char buffer[1024];
+
+            while (fgets(buffer, sizeof(buffer), fp))
+            {
+                // duplicate the line so it persists
+                char *line = strdup(buffer);
+                if (!line)
+                    break;
+
+                list_add(lista_queries->lista, line);       // your library handles insertion
+            }
+            pthread_mutex_unlock(lista_queries->mutex);
+
+            fclose(fp);
+
+            log_info(logger, "## Query %d: Se recibe la Query. El path de operaciones es: %s", query_id, query_path);
             sem_post(sem_hay_query);
 
             break;
         
         case QUERY_FINALIZACION:
 
+            pthread_mutex_lock(lista_queries->mutex);
+            list_destroy_and_destroy_elements(lista_queries->lista, free);
+            pthread_mutex_unlock(lista_queries->mutex);
+
             enviar_paquete_ok(socket_master);
 
             break;
 
-        case DESALOJO;
+        case DESALOJO:
 
             // en master: cuando hay un desalojo, se manda el paquete con cod_op DESALOJO, master espera un PC, luego envia un nuevo paquete EXEC_QUERY
 
-            //enviar PC a master con cod_op DESALOJO
+            setear_desalojo_flag(true);
+
+            pthread_mutex_lock(lista_queries->mutex);
+            list_destroy_and_destroy_elements(lista_queries->lista, free);
+            pthread_mutex_unlock(lista_queries->mutex);
+
+            t_paquete * paquete_send = crear_paquete(DESALOJO);
+            agregar_a_paquete(paquete_send, &program_counter, sizeof(int));
+
+            enviar_paquete(paquete_send, socket_master);
+
             setear_desalojo_flag(false);
-            //sem_post al semaforo sem_desalojo_waiter
+            sem_post(sem_desalojo_waiter);
+            break;
+
+        default:
+            log_error(logger, "Codigo de operacion inesperado en handler_worker");
 
         }
     }

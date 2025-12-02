@@ -201,8 +201,6 @@ void *handler_cliente(void *arg) {
             t_list *paquete_recv = recibir_paquete(socket_nuevo);
             int worker_id = *(int *)list_remove(paquete_recv, 0);
 
-            enviar_paquete_ok(socket_nuevo);
-
             // FIFO - registro al worker como libre
             worker_t *w = malloc(sizeof(worker_t));
             w->id            = worker_id;
@@ -384,9 +382,9 @@ void *hilo_worker_query(void *arg) {
     log_info(logger, "## Se envía la Query <%d> (PRIORIDAD <%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
 
     // le mando al W el path + id_query
-    t_paquete *p = crear_paquete(PARAMETROS_QUERY);
-    agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1); // envio path
+    t_paquete *p = crear_paquete(EXEC_QUERY);
     agregar_a_paquete(p, &(q->id_query), sizeof(int));        // envio id
+    agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1); // envio path
     agregar_a_paquete(p, &(q->pc), sizeof(int)); //envio pc
     enviar_paquete(p, w->socket_worker);
     eliminar_paquete(p);

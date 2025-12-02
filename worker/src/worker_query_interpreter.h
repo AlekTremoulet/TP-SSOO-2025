@@ -31,6 +31,8 @@ int obtener_desalojo_flag();
 void setear_desalojo_flag(int value);
 void loop_principal();
 
+char *obtener_instruccion_index(list_struct_t *lista_queries, int PC);
+
 void ejecutar_query(const char* path_query, int query_id);
 qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int query_id);
 qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id);
