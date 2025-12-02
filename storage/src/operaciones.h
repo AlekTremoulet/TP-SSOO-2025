@@ -3,6 +3,7 @@
 
 #include <bitmap.h>
 
+
 typedef enum {
     Inexistente,
     Preexistente,
@@ -43,6 +44,8 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo);
 char* crear_directorio(char* path_a_crear);
 char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo);
 char *escribir_en_hash(char *nombre_bloque);
+char *retornar_hash(char *nombre_bloque);
 void esperar(int milisegundos);
+
 
 #endif

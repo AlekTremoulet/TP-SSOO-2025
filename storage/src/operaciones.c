@@ -363,17 +363,78 @@ char *escribir_en_hash(char *nombre_bloque) {
         }
     }
 
-    size_t longitud_bloque = strlen(nombre_bloque);
-    char *nombre_bloque_hash = crypto_md5(nombre_bloque, longitud_bloque); 
+    char *path_completo = string_from_format("%s%s.dat", dir_physical_blocks, nombre_bloque);
+    FILE *f_bloque = fopen(path_completo, "rb");
+    
+    if (f_bloque == NULL) {
+        log_error(logger, "No se pudo abrir el bloque en: %s", path_completo);
+        config_destroy(hash_config);
+        free(path_completo);
+        return NULL;
+    }
+
+    fseek(f_bloque, 0, SEEK_END);
+    long fsize = ftell(f_bloque);
+    fseek(f_bloque, 0, SEEK_SET);
+
+    char *buffer_contenido = malloc(fsize + 1);
+    fread(buffer_contenido, 1, fsize, f_bloque);
+    buffer_contenido[fsize] = '\0';
+    fclose(f_bloque);
+
+    char *nombre_bloque_hash = crypto_md5(buffer_contenido, fsize); 
     char *nombre_bloque_sin_prefijo = nombre_bloque + 1; 
     config_set_value(hash_config, nombre_bloque_hash, nombre_bloque_sin_prefijo);
 
     if (config_save(hash_config) == -1) {
         log_error(logger, "Error al guardar los datos en blocks_hash_index.config");
     }
+
     config_destroy(hash_config);
+    free(path_completo);
+    free(buffer_contenido);
+
     return nombre_bloque_hash; 
 }
+
+char* retornar_hash(char *nombre_bloque) {
+    int path_len = strlen(dir_physical_blocks) + strlen(nombre_bloque) + 6;
+    char* path_completo = malloc(path_len);
+    sprintf(path_completo, "%s/%s.dat", dir_physical_blocks, nombre_bloque);
+
+    FILE *f_bloque = fopen(path_completo, "rb");
+
+    if (f_bloque == NULL) {
+        log_error(logger, "No se pudo abrir el bloque en: %s", path_completo);
+        free(path_completo);
+        return NULL;
+    }
+
+    fseek(f_bloque, 0, SEEK_END);
+    long fsize = ftell(f_bloque);
+    fseek(f_bloque, 0, SEEK_SET);
+
+    char *buffer_contenido;
+
+    if (fsize == 0) {
+        buffer_contenido = malloc(1);
+        buffer_contenido[0] = '\0';
+    } else {
+        buffer_contenido = malloc(fsize + 1);
+        fread(buffer_contenido, 1, fsize, f_bloque);
+        buffer_contenido[fsize] = '\0';
+    }
+
+    fclose(f_bloque);
+
+    char *nombre_bloque_hash = crypto_md5(buffer_contenido, fsize);
+
+    free(path_completo);
+    free(buffer_contenido);
+
+    return nombre_bloque_hash;
+}
+
 
 
 char* Leer_bloque(char* archivo, char* tag, int dir_base, int query_id){
@@ -494,28 +555,79 @@ void Eliminar_tag(char * Origen, char* tag, int query_id){
     }
 }
 
-void Commit_tag(char* archivo, char* tag, int query_id){
-    char* ruta_archivo = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + strlen("/metadata.config") + 3);
-    sprintf(ruta_archivo, "%s/%s/%s/metadata.config",dir_files,archivo,tag);
+void Commit_tag(char* archivo, char* tag, int query_id) {
+    char* ruta_archivo = string_from_format("%s/%s/%s/metadata.config", dir_files, archivo, tag);
     t_config *config_archivo = config_create(ruta_archivo);
+
     if (config_archivo == NULL) {
-    log_error(logger, "No se pudo abrir el config");
+        log_error(logger, "No se pudo abrir el config en: %s", ruta_archivo);
         free(ruta_archivo);
-    return;
+        return;
     }
+
+    t_config *hash_config = config_create(path_hash);
+    if (!hash_config) {
+        FILE *f = fopen(path_hash, "w");
+        fclose(f);
+        hash_config = config_create(path_hash);
+    }
+
+    char **bloques = config_get_array_value(config_archivo, "Blocks"); 
+    bool hubo_cambios_reapuntamiento = false;
+
+    for (int i = 0; bloques[i] != NULL; i++) {
+        char *id_bloque_actual = bloques[i]; 
+        char *nombre_fisico_actual = string_from_format("block%04d", atoi(id_bloque_actual));
+
+        char *hash_calculado = retornar_hash(nombre_fisico_actual);
+
+        if (config_has_property(hash_config, hash_calculado)) {
+            char *id_bloque_preexistente = config_get_string_value(hash_config, hash_calculado);
+            if (strcmp(id_bloque_actual, id_bloque_preexistente) != 0) {
+                char *path_bloque_a_unlinkear = string_from_format("%s/%s", dir_physical_blocks, nombre_fisico_actual);
+                unlink(path_bloque_a_unlinkear);
+                
+                log_info(logger,"<%d> - <%s>:<%s> Se eliminó el hard link del bloque lógico <%d> al bloque físico <%s>",
+                query_id, archivo, tag,i, path_bloque_a_unlinkear);
+
+                free(path_bloque_a_unlinkear);
+
+                free(bloques[i]);
+                bloques[i] = strdup(id_bloque_preexistente);
+                
+                hubo_cambios_reapuntamiento = true;
+            }
+        } else {
+            config_set_value(hash_config, hash_calculado, id_bloque_actual);
+            config_save(hash_config);
+        }
+
+        free(nombre_fisico_actual);
+        free(hash_calculado);
+    }
+
+    if (hubo_cambios_reapuntamiento) {
+        char *lista_bloques_str = string_array_to_string(bloques); 
+        config_set_value(config_archivo, "Blocks", lista_bloques_str);
+        free(lista_bloques_str);
+    }
+
     config_set_value(config_archivo, "ESTADO", "COMMITED");
-    config_save(config_archivo);
+
+    if (config_save(config_archivo) < 0) {
+        log_error(logger, "Error al guardar metadata.config");
+    }
+
+    log_info(logger, "<%d> - Commit de File:Tag <%s>:<%s>", query_id, archivo, tag);
+
+    string_array_destroy(bloques);
+    config_destroy(hash_config);
     config_destroy(config_archivo);
     free(ruta_archivo);
-    log_info(logger,"<%d> - Commit de File:Tag <%s>:<%s>",query_id,archivo,tag);
-    /*
-    Se deberá, por cada bloque lógico, buscar si existe algún bloque físico que tenga el mismo contenido 
-    (utilizando el hash y archivo blocks_hash_index.config). En caso de encontrar uno, se deberá liberar
-     el bloque físico actual y reapuntar el bloque lógico al bloque físico pre-existente. En caso contrario
-     , simplemente se agregará el hash del nuevo contenido al archivo blocks_hash_index.config.
-    */
-}; 
+}
+
 
 void esperar(int milisegundos){
     usleep(milisegundos*1000);
 }
+
