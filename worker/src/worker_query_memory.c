@@ -191,6 +191,7 @@ static bool enviar_marco_a_storage(int marco) {
     eliminar_paquete(paquete);
 
     protocolo_socket resp = recibir_paquete_ok(socket_storage);
+    close(socket_storage);
     if (resp == OK) {
         frame->modificado = false;
         log_debug(logger, "Marco %d (p.%d %s:%s) enviado a Storage y marcado limpio",marco, frame->nro_pag_logica, frame->archivo, frame->tag);
@@ -241,6 +242,7 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     int size_recv = 0;
     protocolo_socket cod_op = recibir_operacion(socket_storage);
     t_list* paquete_recv = recibir_paquete(socket_storage);
+    close(socket_storage);
     char * buffer = list_remove(paquete_recv,0);
     if (!buffer) {
         log_error(logger, "Error recibiendo pagina %d de %s:%s desde Storage", nro_pagina, archivo, tag);

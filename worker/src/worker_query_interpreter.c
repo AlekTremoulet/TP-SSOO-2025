@@ -299,6 +299,7 @@ qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id) {
     log_info(logger, "## Query %d: Enviado CREATE -> Storage (%s:%s)", query_id, archivo, tag);
 
     protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    close(socket_storage);
     if (respuesta == OK) {
         log_info(logger, "## Query %d: CREATE exitoso", query_id);
         return QI_OK;
@@ -327,6 +328,7 @@ log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", query_id, archivo,
     eliminar_paquete(paquete);
 
     protocolo_socket resp = recibir_paquete_ok(socket_storage);
+    close(socket_storage);
     if (resp != OK) {
         log_error(logger,"## Query %d: Storage rechazó TRUNCATE %s:%s",query_id, archivo, tag);
         return QI_ERR_STORAGE;
@@ -393,6 +395,7 @@ qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* t
     eliminar_paquete(paquete);
 
     protocolo_socket r = recibir_paquete_ok(socket_storage);
+    close(socket_storage);
 
     if (r != OK) {
         log_error(logger, "## Query %d: Storage rechazó TAG", query_id);
@@ -430,6 +433,7 @@ qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id) {
 
     
     protocolo_socket resp = recibir_paquete_ok(socket_storage);
+    close(socket_storage);
     if (resp == OK) {
         memoria_agregar_commit(archivo, tag);
         log_info(logger, "## Query %d: COMMIT exitoso", query_id);
@@ -467,6 +471,7 @@ qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id) {
 
 
     protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
+    close(socket_storage);
     if (respuesta == OK) {
         log_info(logger, "## Query %d: DELETE exitoso", query_id);
         memoria_invalidar_file_tag_completo(archivo, tag);
