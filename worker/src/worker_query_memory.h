@@ -47,7 +47,6 @@ extern int tam_pagina; //Del storage BLOCK_SIZE
 extern int Tam_memoria; // Del worker
 extern int Retardo_reemplazo; // Del worker
 extern char * Algorit_Remplazo; // Del worker
-extern int socket_storage;
 extern int socket_master;
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina);

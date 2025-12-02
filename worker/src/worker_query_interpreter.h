@@ -44,6 +44,8 @@ qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id);
 qi_status_t ejecutar_FLUSH(char* archivo, char* tag, int query_id);
 qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id);
 
+int enviar_peticion_a_storage(t_paquete *paquete);
+
 void loop_principal();
 
 int obtener_desalojo_flag();

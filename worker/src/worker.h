@@ -18,7 +18,6 @@ char* puerto_storage;
 char *puerto_master_desalojo;
 int socket_master;
 int socket_desalojo;
-int socket_storage;
 
 char * Path_Queries;
 

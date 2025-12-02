@@ -1,7 +1,6 @@
 #include <worker_query_memory.h>
 
 extern t_log* logger;
-extern int socket_storage;
 extern int tam_pagina;
 extern int Tam_memoria;
 extern char* Algorit_Remplazo;
@@ -188,7 +187,7 @@ static bool enviar_marco_a_storage(int marco) {
     agregar_a_paquete(paquete, &Memoria->tam_pagina, sizeof(int));
     agregar_a_paquete(paquete, frame->data, Memoria->tam_pagina);
 
-    enviar_paquete(paquete, socket_storage);
+    int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
 
     protocolo_socket resp = recibir_paquete_ok(socket_storage);
@@ -236,7 +235,7 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &nro_pagina, sizeof(int));
-    enviar_paquete(paquete, socket_storage);
+    int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
 
     int size_recv = 0;

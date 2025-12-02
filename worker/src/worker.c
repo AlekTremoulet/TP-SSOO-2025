@@ -185,7 +185,9 @@ void *conexion_cliente_master(void *args){
 }
 
 void *conexion_cliente_storage (void *args){
-	do
+	int socket_storage;
+    
+    do
 	{
 		socket_storage = crear_conexion(ip_storage, puerto_storage);
 		sleep(1);
@@ -204,6 +206,7 @@ void *conexion_cliente_storage (void *args){
 
 void parametros_storage(int socket_storage){
     t_paquete *paquete_send = crear_paquete(PARAMETROS_STORAGE);
+    agregar_a_paquete(paquete_send, "xd", strlen("xd"));
     enviar_paquete(paquete_send, socket_storage);
     eliminar_paquete(paquete_send);
 

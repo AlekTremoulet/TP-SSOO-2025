@@ -92,6 +92,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
 
         log_info(logger, "Se conecta un Worker con Id: <%d> ",parametros_recibidos_worker.id);
         cod_op = recibir_operacion(socket_nuevo);
+        esperar(retardo_operacion);
         switch (cod_op)
         {
         case OP_CREATE:
@@ -112,6 +113,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_WRITE:
+            esperar(retardo_bloque);
             paquete_recv = recibir_paquete(socket_nuevo);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
@@ -120,9 +122,9 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             query_id = *(int*) list_remove(paquete_recv, 0);
             Escrbir_bloque(archivo,tag,dir_base,contenido,query_id);
             enviar_paquete_ok(socket_nuevo);
-            esperar(retardo_bloque);
             break;
         case OP_READ:
+            esperar(retardo_bloque);
             paquete_recv = recibir_paquete(socket_nuevo);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
@@ -131,7 +133,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             query_id = *(int*) list_remove(paquete_recv, 0);
             Leer_bloque(archivo,tag,dir_base,query_id);
             enviar_paquete_ok(socket_nuevo);
-            esperar(retardo_bloque);
             break;
         case OP_TAG:
             paquete_recv = recibir_paquete(socket_nuevo);
@@ -164,17 +165,18 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             enviar_paquete_ok(socket_nuevo);
             break;
         case PARAMETROS_STORAGE:
-                t_paquete* paquete_send = crear_paquete(PARAMETROS_STORAGE);
-                agregar_a_paquete(paquete_send,&tam_bloque,sizeof(int));
-                enviar_paquete(paquete_send,socket_nuevo);
-                eliminar_paquete(paquete_send);
+            paquete_recv = recibir_paquete(socket_nuevo);
+            list_destroy_and_destroy_elements(paquete_recv, free);
+            t_paquete* paquete_send = crear_paquete(PARAMETROS_STORAGE);
+            agregar_a_paquete(paquete_send,&tam_bloque,sizeof(int));
+            enviar_paquete(paquete_send,socket_nuevo);
+            eliminar_paquete(paquete_send);
             break;
         default:
             log_error(logger, "Se recibio un protocolo inesperado de WORKER");
             return (void *)EXIT_FAILURE;
             break;
         }
-        esperar(retardo_operacion);
            
     }
     return (void *)EXIT_SUCCESS;

@@ -3,9 +3,10 @@
 
 int block_size = 0;
 int mem_delay_ms = 0;
-extern int socket_storage;
 extern int socket_master;
 extern sem_t * sem_desalojo_waiter;
+
+extern char * ip_storage, *puerto_storage;
 
 
 qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido,int id_query);
@@ -292,7 +293,7 @@ qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id) {
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &(query_id), sizeof(int));
 
-    enviar_paquete(paquete, socket_storage);
+    int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
 
     log_info(logger, "## Query %d: Enviado CREATE -> Storage (%s:%s)", query_id, archivo, tag);
@@ -322,7 +323,7 @@ log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", query_id, archivo,
     agregar_a_paquete(paquete, &nuevo_tamanio, sizeof(int));
     agregar_a_paquete(paquete, &query_id, sizeof(int));
 
-    enviar_paquete(paquete, socket_storage);
+    int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
 
     protocolo_socket resp = recibir_paquete_ok(socket_storage);
@@ -388,7 +389,7 @@ qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* t
     agregar_a_paquete(paquete, tag_dest,  strlen(tag_dest)+1);
     agregar_a_paquete(paquete, &query_id, sizeof(int));
 
-    enviar_paquete(paquete, socket_storage);
+    int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
 
     protocolo_socket r = recibir_paquete_ok(socket_storage);
@@ -424,7 +425,7 @@ qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id) {
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &query_id, sizeof(int));
 
-    enviar_paquete(paquete, socket_storage);
+    int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
 
     
@@ -460,7 +461,7 @@ qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id) {
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &(query_id), sizeof(int));
 
-    enviar_paquete(paquete, socket_storage);
+    int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
 
 
@@ -475,4 +476,19 @@ qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id) {
         return QI_ERR_PARSE;
     }
 
+}
+int enviar_peticion_a_storage(t_paquete * paquete){
+    int socket_storage;
+    
+    do
+	{
+		socket_storage = crear_conexion(ip_storage, puerto_storage);
+		sleep(1);
+        log_debug(logger,"Intentando conectar a STORAGE");        
+        
+	}while(socket_storage == -1);
+
+    enviar_paquete(paquete, socket_storage);
+
+    return socket_storage;
 }
