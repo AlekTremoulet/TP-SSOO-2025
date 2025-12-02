@@ -25,7 +25,8 @@ int main(int argc, char* argv[]) {
     Truncar_file("archivo","tag",10,1);    
     Escrbir_bloque("archivo","tag",5, "camboya",1);
     Leer_bloque("archivo","tag",5,2);
-    // Eliminar_tag("archivo", "tag", 12);
+    Crear_tag("archivo","archivo","tag","tag2",32);
+    Eliminar_tag("archivo", "tag", 12);
     //-hardcodeado para probar
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);

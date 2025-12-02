@@ -436,20 +436,38 @@ char* Leer_bloque(char* archivo, char* tag, int dir_base, int query_id){
     return buffer_contenido;
 }
 
-void Crear_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino, int query_id){
-    char * comando = malloc(strlen(Origen) + strlen(Destino)+1 + 10);
-    sprintf(comando ,"cp -r %s %s", Origen,Destino);
+void Crear_tag(char * Origen, char * Destino, char* tag_origen, char* tag_destino, int query_id) {
+    char* ruta_origen = malloc(strlen(dir_files) + strlen(Origen) + strlen(tag_origen) + 3);
+    sprintf(ruta_origen, "%s/%s/%s", dir_files, Origen, tag_origen);
+
+    char* ruta_destino = malloc(strlen(dir_files) + strlen(Destino) + strlen(tag_destino) + 3);
+    sprintf(ruta_destino, "%s/%s/%s", dir_files, Destino, tag_destino);
+
+    char* comando = malloc(strlen("cp -r ") + strlen(ruta_origen) + strlen(" ") + strlen(ruta_destino) + 1);
+    sprintf(comando, "cp -r %s %s", ruta_origen, ruta_destino);
+
     system(comando);
+
+    free(ruta_origen);
+    free(ruta_destino);
     free(comando);
 
-    char* ruta_archivo = malloc(strlen(dir_files) + strlen(Destino) + strlen(tag_destino) + 1);
-    sprintf(ruta_archivo, "%s/%s/%s",dir_files,Destino,tag_destino);
+    char* ruta_archivo = malloc(strlen(dir_files) + strlen(Destino) + strlen(tag_destino) + strlen("/metadata.config") + 3);
+    sprintf(ruta_archivo, "%s/%s/%s/metadata.config", dir_files, Destino, tag_destino);
+    
     t_config *config_archivo = config_create(ruta_archivo);
+
+    if (config_archivo == NULL) {
+        log_error(logger, "No se pudo abrir el config");
+        free(ruta_archivo);
+        return;
+    }
+
     config_set_value(config_archivo, "ESTADO", "WORK IN PROGRESS");
     config_save(config_archivo);
     config_destroy(config_archivo);
     free(ruta_archivo);
-    log_info(logger,"<%d> - Tag Creado <%s>:<%s>",query_id,Destino,tag_destino);
+    log_info(logger,"<%d> - Tag Creado <%s>:<%s>", query_id, Destino, tag_destino);
 };
 
 void Eliminar_tag(char * Origen, char* tag, int query_id){
@@ -490,6 +508,12 @@ void Commit_tag(char* archivo, char* tag, int query_id){
     config_destroy(config_archivo);
     free(ruta_archivo);
     log_info(logger,"<%d> - Commit de File:Tag <%s>:<%s>",query_id,archivo,tag);
+    /*
+    Se deberá, por cada bloque lógico, buscar si existe algún bloque físico que tenga el mismo contenido 
+    (utilizando el hash y archivo blocks_hash_index.config). En caso de encontrar uno, se deberá liberar
+     el bloque físico actual y reapuntar el bloque lógico al bloque físico pre-existente. En caso contrario
+     , simplemente se agregará el hash del nuevo contenido al archivo blocks_hash_index.config.
+    */
 }; 
 
 void esperar(int milisegundos){
