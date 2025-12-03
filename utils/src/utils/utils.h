@@ -59,8 +59,6 @@ enum protocolo_socket
     OP_COMMIT,
     OP_FLUSH,
     OP_DELETE,
-    OP_SOLICITAR_PAGINAS,
-    OP_ESCRIBIR_PAGINA,
 /*nuevas*/
     NOMBRE_IO,
     DORMIR_IO,

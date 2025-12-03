@@ -184,9 +184,8 @@ static bool enviar_marco_a_storage(int marco,int query_id) {
     agregar_a_paquete(paquete, frame->archivo, strlen(frame->archivo) + 1);
     agregar_a_paquete(paquete, frame->tag, strlen(frame->tag) + 1);
     agregar_a_paquete(paquete, &frame->nro_pag_logica, sizeof(int));
-    agregar_a_paquete(paquete, &Memoria->tam_pagina, sizeof(int));
     agregar_a_paquete(paquete, frame->data, Memoria->tam_pagina);
-    agregar_a_paquete(paquete, &query_id, sizeof(int)); // query id harcodeado >:()
+    agregar_a_paquete(paquete, &query_id, sizeof(int));
 
 
     int socket_storage = enviar_peticion_a_storage(paquete);
@@ -238,8 +237,7 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina,int q
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &nro_pagina, sizeof(int));
-    agregar_a_paquete(paquete, &Memoria->tam_pagina, sizeof(int));
-    agregar_a_paquete(paquete, &query_id, sizeof(int)); // query id harcodeado >:()
+    agregar_a_paquete(paquete, &query_id, sizeof(int));
 
     int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
@@ -505,7 +503,6 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, 
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &direccion_base, sizeof(int));
-    agregar_a_paquete(paquete, &tamanio, sizeof(int));
     agregar_a_paquete(paquete, &(query_id), sizeof(int));
     agregar_a_paquete(paquete, buffer, tamanio + 1);
 

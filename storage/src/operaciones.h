@@ -35,8 +35,8 @@ extern char * path_hash;
 
 void Crear_file(char* archivo,char* tag,int query_id); 
 void Truncar_file(char* archivo, char* tag, int tamanio, int query_id); 
-void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int query_id); 
-char* Leer_bloque(char* archivo, char* tag, int dir_base, int query_id); 
+void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id); 
+char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id); 
 void Eliminar_tag(char* archivo, char* tag, int query_id); 
 void Crear_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino, int query_id);
 void Commit_tag(char* archivo, char* tag, int query_id); 

@@ -106,6 +106,7 @@ void Crear_file(char* archivo,char* tag, int query_id){
 
 void Truncar_file(char* archivo, char* tag, int tamanio, int query_id) 
 {
+    tamanio /= tam_bloque;
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
     sprintf(metadata_config_asociado, "%s/%s/%s/metadata.config", dir_files, archivo, tag);
 
@@ -223,7 +224,7 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
     }
 }
 
-void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int query_id){
+void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id){
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
     sprintf(metadata_config_asociado, "%s/%s/%s/metadata.config", dir_files, archivo, tag);
 
@@ -252,8 +253,8 @@ void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int
         }
 
 
-        if (dir_base >= cantidad_bloques) {
-            log_error(logger, "<%d> - Error: Intento de escritura fuera del tamaño del archivo (Truncate insuficiente). Indice solicitado: %d, Bloques disponibles: %d", query_id, dir_base, cantidad_bloques);
+        if (num_bloque_Log >= cantidad_bloques) {
+            log_error(logger, "<%d> - Error: Intento de escritura fuera del tamaño del archivo (Truncate insuficiente). Indice solicitado: %d, Bloques disponibles: %d", query_id, num_bloque_Log, cantidad_bloques);
             
             string_iterate_lines(bloques_actuales, (void*) free);
             free(bloques_actuales);
@@ -262,7 +263,7 @@ void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int
             return;
         }
 
-        int bloque_fisico_actual = atoi(bloques_actuales[dir_base]);
+        int bloque_fisico_actual = atoi(bloques_actuales[num_bloque_Log]);
 
         char* path_bloque_fisico = malloc(strlen(dir_physical_blocks) + 20);
         sprintf(path_bloque_fisico, "%s/block%04d.dat", dir_physical_blocks, bloque_fisico_actual);
@@ -299,13 +300,13 @@ void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int
                     sprintf(archivo_tag, "%s/%s/%s", dir_files, archivo, tag);
                     
                     char* logical_block_path = malloc(strlen(archivo_tag) + 50);
-                    sprintf(logical_block_path, "%s/logical_blocks/%06d.dat", archivo_tag, dir_base);
+                    sprintf(logical_block_path, "%s/logical_blocks/%06d.dat", archivo_tag, num_bloque_Log);
 
                     unlink(logical_block_path);
                     link(path_nuevo_bloque_fisico, logical_block_path);
 
-                    free(bloques_actuales[dir_base]);
-                    bloques_actuales[dir_base] = string_itoa(nuevo_bloque_libre);
+                    free(bloques_actuales[num_bloque_Log]);
+                    bloques_actuales[num_bloque_Log] = string_itoa(nuevo_bloque_libre);
 
                     char* lista_final = string_new();
                     string_append(&lista_final, "[");
@@ -437,7 +438,7 @@ char* retornar_hash(char *nombre_bloque) {
 
 
 
-char* Leer_bloque(char* archivo, char* tag, int dir_base, int query_id){
+char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id){
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
     sprintf(metadata_config_asociado, "%s/%s/%s/metadata.config", dir_files, archivo, tag);
 
@@ -456,8 +457,8 @@ char* Leer_bloque(char* archivo, char* tag, int dir_base, int query_id){
         cantidad_bloques++;
     }
 
-    if (dir_base >= cantidad_bloques) {
-        log_error(logger, "<%d> - Error: Intento de lectura fuera de rango. Indice: %d, Bloques disponibles: %d", query_id, dir_base, cantidad_bloques);
+    if (num_bloque_Log >= cantidad_bloques) {
+        log_error(logger, "<%d> - Error: Intento de lectura fuera de rango. Indice: %d, Bloques disponibles: %d", query_id, num_bloque_Log, cantidad_bloques);
         string_iterate_lines(bloques_actuales, (void*) free);
         free(bloques_actuales);
         config_destroy(config_a_leer);
@@ -465,7 +466,7 @@ char* Leer_bloque(char* archivo, char* tag, int dir_base, int query_id){
         return NULL;
     }
 
-    int bloque_fisico_actual = atoi(bloques_actuales[dir_base]);
+    int bloque_fisico_actual = atoi(bloques_actuales[num_bloque_Log]);
 
     char* path_bloque_fisico = malloc(strlen(dir_physical_blocks) + 20);
     sprintf(path_bloque_fisico, "%s/block%04d.dat", dir_physical_blocks, bloque_fisico_actual);

@@ -77,7 +77,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
     char* tag;
     int query_id;
     int tamanio;
-    int dir_base;
+    int num_bloque_Log;
     parametros_worker parametros_recibidos_worker;
 
     while((socket_nuevo = esperar_cliente(server))){
@@ -109,10 +109,10 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             paquete_recv = recibir_paquete(socket_nuevo);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
-            dir_base = *(int *)list_remove(paquete_recv, 0);
+            num_bloque_Log = *(int *)list_remove(paquete_recv, 0);
             char* contenido = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Escrbir_bloque(archivo,tag,dir_base,contenido,query_id);
+            Escrbir_bloque(archivo,tag,num_bloque_Log,contenido,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_READ:
@@ -120,10 +120,9 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             paquete_recv = recibir_paquete(socket_nuevo);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
-            dir_base = *(int *)list_remove(paquete_recv, 0);
-            tamanio = *(int *)list_remove(paquete_recv, 0);
+            num_bloque_Log = *(int *)list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Leer_bloque(archivo,tag,dir_base,query_id);
+            Leer_bloque(archivo,tag,num_bloque_Log,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_TAG:
@@ -142,10 +141,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             tag = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             Commit_tag(archivo,tag,query_id);
-            enviar_paquete_ok(socket_nuevo);
-            break;
-        case OP_FLUSH:
-            //cuando este listo memoria vemos esto
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_DELETE:
