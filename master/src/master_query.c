@@ -25,9 +25,13 @@ char * ArchivoQueryInst(char * path_query){
     return instrucciones;
 }
 
-void query_enviar_lectura(query_t * q, void * buffer, int size){
+void query_enviar_lectura(query_t * q, char * archivo, char * tag, char * buffer){
     t_paquete * paquete_end = crear_paquete(QUERY_LECTURA);
-    agregar_a_paquete(paquete_end, buffer, size);
+    agregar_a_paquete(paquete_end, archivo, strlen(archivo)+1);
+    agregar_a_paquete(paquete_end, tag, strlen(tag)+1);
+
+    agregar_a_paquete(paquete_end, buffer, strlen(buffer)+1);
+
     enviar_paquete(paquete_end, q->socket_qc);
 }
 void query_finalizar(query_t * q, char* motivo){

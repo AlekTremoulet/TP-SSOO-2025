@@ -402,20 +402,17 @@ void *hilo_worker_query(void *arg) {
 
         switch (cod) {
 
-            case WORKER_LECTURA: {
+            case OP_READ: {
 
                 t_list* paquete = recibir_paquete(w->socket_worker);
 
-                //recibimos id de worker?
-                int id_query = *(int *)list_remove(paquete, 0);
-
-                int size = *(int *)list_remove(paquete, 0);
-
-                void *buffer = list_remove(paquete, 0);
+                char * archivo = list_remove(paquete, 0);
+                char * tag = list_remove(paquete, 0);
+                char *buffer = list_remove(paquete, 0);
 
                 log_info(logger, "## Se envía un mensaje de lectura de la Query <%d> en el Worker <%d> al Query Control", q->id_query, w->id);
 
-                query_enviar_lectura(q, buffer, size);
+                query_enviar_lectura(q, archivo, tag, buffer);
 
                 break;
             }
@@ -426,6 +423,7 @@ void *hilo_worker_query(void *arg) {
                 if (paquete != NULL) {
                     list_destroy_and_destroy_elements(paquete, free);
                 }
+                char * motivo = list_remove(paquete, 0);
             
                 log_info(logger, "## Se terminó la Query <%d> en el Worker <%d>", q->id_query, w->id);
 
@@ -434,7 +432,7 @@ void *hilo_worker_query(void *arg) {
                 // reencolar worker como libre
                 encolar_worker(workers_libres, w, -1);
 
-                query_finalizar(q, "Fin de query");
+                query_finalizar(q, motivo);
 
                 free(q->archivo);
                 free(q);
@@ -444,7 +442,7 @@ void *hilo_worker_query(void *arg) {
                 return NULL;
             }
 
-            case WORKER_DESALOJO: {
+            case DESALOJO: {
                 
                 t_list *paquete = recibir_paquete(w->socket_worker);
 

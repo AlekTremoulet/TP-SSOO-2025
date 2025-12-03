@@ -16,7 +16,7 @@ typedef struct {
 extern char* puerto;
 char * ArchivoQueryInst(char * path_query);
 
-void query_enviar_lectura(query_t *q, void *buffer, int size);
+void query_enviar_lectura(query_t *q, char * archivo, char * tag, char *buffer);
 
 void query_finalizar(query_t *q, char *motivo);
 

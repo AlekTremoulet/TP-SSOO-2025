@@ -239,8 +239,11 @@ void loop_principal(){
             setear_desalojo_flag(false);
 
         }else {
-            ejecutar_query(query_path);
-            sem_post(sem_hay_query);
+            if (!ejecutar_query(query_path)){
+                sem_post(sem_hay_query);
+            }else {
+                //funcion de devolucion de "error a master"
+            }
         }  
     }
 
@@ -257,7 +260,7 @@ char * obtener_instruccion_index(list_struct_t * lista_queries, int PC){
     return returnvalue;
 }
 
-void ejecutar_query(const char* path_query) {
+int ejecutar_query(const char* path_query) {
 
     char* linea = obtener_instruccion_index(lista_queries, program_counter);
     size_t len = 0;
@@ -274,7 +277,8 @@ void ejecutar_query(const char* path_query) {
     log_info(logger, "## Query %d: - Instrucción realizada: %s", obtener_query_id(), linea);
 
     if (st == QI_END) {
-        log_info(logger, "## Query %d: Query finalizada correctamente", obtener_query_id());
+        log_info(logger, "## Query %d: Query finalizada correctamente", obtener_query_id());        
+        return 1;
     }
 
     if (st == QI_ERR_PARSE) {
@@ -282,6 +286,8 @@ void ejecutar_query(const char* path_query) {
     }
 
     program_counter++;
+
+    return 0;
 
     free(linea);
 }

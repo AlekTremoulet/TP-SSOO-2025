@@ -33,7 +33,7 @@ void loop_principal();
 
 char *obtener_instruccion_index(list_struct_t *lista_queries, int PC);
 
-void ejecutar_query(const char* path_query);
+int ejecutar_query(const char* path_query);
 qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args);
 qi_status_t ejecutar_CREATE(char* archivo, char* tag);
 qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio);
