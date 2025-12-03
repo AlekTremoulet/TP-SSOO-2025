@@ -35,6 +35,10 @@ void inicializarWorker();
 void levantarConfig(char* archivo_config);
 void levantarStorage();
 
+int obtener_query_id();
+
+void setear_query_id(int value);
+
 void *conexion_cliente_master(void *args);
 void *conexion_cliente_storage(void *args);
 

@@ -24,8 +24,8 @@ extern pthread_mutex_t * mutex_flag_desalojo;
 
 
 
-qi_status_t obtener_instruccion_y_args(void* parametros_worker,  char* linea, int query_id);
-qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int query_id);
+qi_status_t obtener_instruccion_y_args(void* parametros_worker,  char* linea);
+qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args);
 
 int obtener_desalojo_flag();
 void setear_desalojo_flag(int value);
@@ -33,16 +33,16 @@ void loop_principal();
 
 char *obtener_instruccion_index(list_struct_t *lista_queries, int PC);
 
-void ejecutar_query(const char* path_query, int query_id);
-qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int query_id);
-qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id);
-qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio, int query_id);
-qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido, int query_id);
-qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio, int query_id);
-qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* tag_dest, int query_id);
-qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id);
-qi_status_t ejecutar_FLUSH(char* archivo, char* tag, int query_id);
-qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id);
+void ejecutar_query(const char* path_query);
+qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args);
+qi_status_t ejecutar_CREATE(char* archivo, char* tag);
+qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio);
+qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido);
+qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio);
+qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* tag_dest);
+qi_status_t ejecutar_COMMIT(char* archivo, char* tag);
+qi_status_t ejecutar_FLUSH(char* archivo, char* tag);
+qi_status_t ejecutar_DELETE(char* archivo, char* tag);
 
 int enviar_peticion_a_storage(t_paquete *paquete);
 

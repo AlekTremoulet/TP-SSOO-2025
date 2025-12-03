@@ -65,14 +65,14 @@ void ocuapar_espacio(int victima,char * tag);
 void memoria_actualizar_tag( char* arch_o,  char* tag_o, char* arch_n,  char* tag_n);
 void memoria_invalidar_file_tag_completo(const char* archivo, const char* tag);
 void memoria_eliminar_commit(const char* archivo, const char* tag);
-void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam,int id_query);
+void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam);
 
 
-qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido,int id_query);
-qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio, int query_id);
-qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag, int query_id);
+qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido);
+qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio);
+qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag);
 
-qi_status_t memoria_flush_global(int query_id);
+qi_status_t memoria_flush_global();
 bool hubo_COMMIT_no_se_puede_WRITE(const char* archivo, const char* tag);
 
 

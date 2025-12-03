@@ -8,6 +8,7 @@ extern int Retardo_reemplazo;
 t_list* filetag_commiteados;
 t_memoria* Memoria = NULL;
 
+int obtener_query_id();
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina_local){
     if (Memoria) 
@@ -171,7 +172,7 @@ int seleccionar_victima(){
 }
 
 // escribe un marco en Storage si esta modificado 
-static bool enviar_marco_a_storage(int marco,int query_id) {
+static bool enviar_marco_a_storage(int marco) {
     t_pagina* frame = &Memoria->marcos[marco];
     if (!frame->modificado) 
         return true;
@@ -180,12 +181,14 @@ static bool enviar_marco_a_storage(int marco,int query_id) {
         return false;
     }
 
+    int query_id_temp = obtener_query_id();
+
     t_paquete* paquete = crear_paquete(OP_WRITE);
     agregar_a_paquete(paquete, frame->archivo, strlen(frame->archivo) + 1);
     agregar_a_paquete(paquete, frame->tag, strlen(frame->tag) + 1);
     agregar_a_paquete(paquete, &frame->nro_pag_logica, sizeof(int));
     agregar_a_paquete(paquete, frame->data, Memoria->tam_pagina);
-    agregar_a_paquete(paquete, &query_id, sizeof(int));
+    agregar_a_paquete(paquete, &query_id_temp, sizeof(int));
 
 
     int socket_storage = enviar_peticion_a_storage(paquete);
@@ -203,7 +206,7 @@ static bool enviar_marco_a_storage(int marco,int query_id) {
     }
 }
 
-static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina,int query_id) {
+static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     int existe = buscar_marco_por_pagina(archivo, tag, nro_pagina);
     if (existe != -1) 
         return existe;
@@ -213,9 +216,9 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina,int q
     if (libre == -1) {
         // elegir victima y, si esta modificado, enviar a storage
         int victima = seleccionar_victima();
-        // si victima está modificado -> flush de esa página concreta
+        // si victima está modificado -> WRITE de esa página concreta
         if (Memoria->marcos[victima].modificado) {
-            if (!enviar_marco_a_storage(victima,query_id)) {
+            if (!enviar_marco_a_storage(victima)) {
                 log_error(logger, "No se pudo escribir la victima antes de reemplazar");
                 return -1;
             }
@@ -233,11 +236,13 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina,int q
         libre = victima;
     }
 
+    int query_id_temp = obtener_query_id();
+
     t_paquete* paquete = crear_paquete(OP_READ);
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &nro_pagina, sizeof(int));
-    agregar_a_paquete(paquete, &query_id, sizeof(int));
+    agregar_a_paquete(paquete, &query_id_temp, sizeof(int));
 
     int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
@@ -271,7 +276,7 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina,int q
     return libre;
 }
 
-static bool asegurar_paginas_cargadas(const char* archivo, const char* tag, int direccion_base, int cantidad_bytes,int query_id) {
+static bool asegurar_paginas_cargadas(const char* archivo, const char* tag, int direccion_base, int cantidad_bytes) {
     if (cantidad_bytes <= 0) 
         return true;
     int pagina_ini = direccion_a_pagina(direccion_base);
@@ -280,7 +285,7 @@ static bool asegurar_paginas_cargadas(const char* archivo, const char* tag, int 
     for (int p = pagina_ini; p <= pagina_fin; p++) {
         int existe = buscar_marco_por_pagina(archivo, tag, p);
         if (existe == -1) {
-            existe = cargar_pagina_en_marco(archivo, tag, p,query_id);
+            existe = cargar_pagina_en_marco(archivo, tag, p);
             if (existe == -1) 
                 return false;
             // hay que poner retardo?
@@ -357,7 +362,7 @@ void memoria_eliminar_commit(const char* archivo, const char* tag) {
     log_info(logger, "Memoria: eliminado COMMIT %s:%s (si existía)", archivo, tag);
 }
 
-void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam,int id_query)
+void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam)
 {
     int tam_pag = Memoria->tam_pagina;
     int paginas_validas = (nuevo_tam + tam_pag - 1) / tam_pag;
@@ -376,7 +381,7 @@ void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam,int id_
         {
             if (p->modificado)
             {
-                if (!enviar_marco_a_storage(i,id_query))
+                if (!enviar_marco_a_storage(i))
                     log_error(logger, "Error al flushear marco %d durante TRUNCATE", i);
             }
             free(p->archivo);
@@ -394,7 +399,7 @@ void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam,int id_
     log_info(logger, "Memoria: TRUNCATE finalizado para %s:%s, nuevo tamaño=%d",archivo, tag, nuevo_tam);
 }
 
-qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,char * contenido,int id_query){
+qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,char * contenido){
     if (!Memoria) 
         return QI_ERR_FILE;
     if (!archivo || !tag || !contenido) 
@@ -405,15 +410,15 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,
     }
 
     int longitud = (int)strlen(contenido);
-    log_info(logger, "## Query %d: WRITE en Memoria %s:%s desde %d (%d bytes)", id_query, archivo, tag, direccion_base, longitud);
+    log_info(logger, "## Query %d: WRITE en Memoria %s:%s desde %d (%d bytes)", obtener_query_id(), archivo, tag, direccion_base, longitud);
 
     if (direccion_base < 0 || direccion_base + longitud > Memoria->tam_total) {
-        log_error(logger, "## Query %d: WRITE fuera de rango (dir %d len %d, tam %d)", id_query, direccion_base, longitud, Memoria->tam_total);
+        log_error(logger, "## Query %d: WRITE fuera de rango (dir %d len %d, tam %d)", obtener_query_id(), direccion_base, longitud, Memoria->tam_total);
         return QI_ERR_PARSE;
     }
 
-    if (!asegurar_paginas_cargadas(archivo, tag, direccion_base, longitud,id_query)) {
-        log_error(logger, "## Query %d: Error al obtener páginas necesarias desde Storage", id_query);
+    if (!asegurar_paginas_cargadas(archivo, tag, direccion_base, longitud)) {
+        log_error(logger, "## Query %d: Error al obtener páginas necesarias desde Storage", obtener_query_id());
         return QI_ERR_STORAGE;
     }
 
@@ -440,7 +445,7 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,
         cursor_logico += a_escribir;
     }
 
-    log_info(logger, "## Query %d: WRITE completado en memoria local (%s:%s)", id_query, archivo, tag);
+    log_info(logger, "## Query %d: WRITE completado en memoria local (%s:%s)", obtener_query_id(), archivo, tag);
     return QI_OK;
 }
 
@@ -455,21 +460,21 @@ bool hubo_COMMIT_no_se_puede_WRITE(const char* archivo, const char* tag) {
     return false;
 }
 
-qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio, int query_id) {
+qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio) {
     if (!Memoria) 
         return QI_ERR_FILE;
     if (!archivo || !tag || tamanio <= 0) 
         return QI_ERR_PARSE;
 
-    log_info(logger, "## Query %d: READ en Memoria %s:%s desde %d (%d bytes)", query_id, archivo, tag, direccion_base, tamanio);
+    log_info(logger, "## Query %d: READ en Memoria %s:%s desde %d (%d bytes)", obtener_query_id(), archivo, tag, direccion_base, tamanio);
 
     if (direccion_base < 0 || direccion_base + tamanio > Memoria->tam_total) {
-        log_error(logger, "## Query %d: READ fuera de rango", query_id);
+        log_error(logger, "## Query %d: READ fuera de rango", obtener_query_id());
         return QI_ERR_PARSE;
     }
 
-    if (!asegurar_paginas_cargadas(archivo, tag, direccion_base, tamanio,query_id)) {
-        log_error(logger, "## Query %d: Error al obtener páginas necesarias desde Storage (READ)", query_id);
+    if (!asegurar_paginas_cargadas(archivo, tag, direccion_base, tamanio)) {
+        log_error(logger, "## Query %d: Error al obtener páginas necesarias desde Storage (READ)", obtener_query_id());
         return QI_ERR_STORAGE;
     }
 
@@ -502,24 +507,24 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, 
     t_paquete* paquete = crear_paquete(OP_READ);
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
-    agregar_a_paquete(paquete, &direccion_base, sizeof(int));
-    agregar_a_paquete(paquete, &(query_id), sizeof(int));
-    agregar_a_paquete(paquete, buffer, tamanio + 1);
+    // agregar_a_paquete(paquete, &direccion_base, sizeof(int));
+    // agregar_a_paquete(paquete, &(query_id), sizeof(int));
+    agregar_a_paquete(paquete, buffer, strlen(buffer)+1);
 
     enviar_paquete(paquete, socket_master);
 
-    log_info(logger, "## Query %d: READ completado: '%s' (%s:%s)", query_id, buffer, archivo, tag);
+    log_info(logger, "## Query %d: READ completado: '%s' (%s:%s)", obtener_query_id(), buffer, archivo, tag);
     free(buffer);
     return QI_OK;
 }
 
-qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag, int query_id) {
+qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag) {
     if (!Memoria) 
         return QI_ERR_FILE;
     if (!archivo || !tag) 
         return QI_ERR_PARSE;
 
-    log_info(logger, "## Query %d: FLUSH iniciado para %s:%s", query_id, archivo, tag);
+    log_info(logger, "## Query %d: FLUSH iniciado para %s:%s", obtener_query_id(), archivo, tag);
 
     bool any_sent = false;
     for (int i = 0; i < Memoria->cant_marcos; i++) {
@@ -529,8 +534,8 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag, int query_id) {
             strcmp(f->archivo, archivo) == 0 &&
             strcmp(f->tag, tag) == 0) {
             // enviar marco i a Storage
-            if (!enviar_marco_a_storage(i,query_id)) {
-                log_error(logger, "## Query %d: Error enviando pagina %d durante FLUSH", query_id, f->nro_pag_logica);
+            if (!enviar_marco_a_storage(i)) {
+                log_error(logger, "## Query %d: Error enviando pagina %d durante FLUSH", obtener_query_id(), f->nro_pag_logica);
                 return QI_ERR_STORAGE;
             }
             any_sent = true;
@@ -538,30 +543,30 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag, int query_id) {
     }
 
     if (any_sent) {
-        log_info(logger, "## Query %d: FLUSH completado exitosamente (%s:%s)", query_id, archivo, tag);
+        log_info(logger, "## Query %d: FLUSH completado exitosamente (%s:%s)", obtener_query_id(), archivo, tag);
     } else {
-        log_info(logger, "## Query %d: FLUSH: no habia paginas modificadas para %s:%s", query_id, archivo, tag);
+        log_info(logger, "## Query %d: FLUSH: no habia paginas modificadas para %s:%s", obtener_query_id(), archivo, tag);
     }
     return QI_OK;
 }
 
-qi_status_t memoria_flush_global(int query_id) { //cuando se desaloja limpia las paginas modificadas
+qi_status_t memoria_flush_global() { //cuando se desaloja limpia las paginas modificadas
     if (!Memoria)
         return QI_ERR_FILE;
 
-    log_info(logger, "## Query %d: Ejecutando FLUSH GLOBAL", query_id);
+    log_info(logger, "## Query %d: Ejecutando FLUSH GLOBAL", obtener_query_id());
 
     for (int i = 0; i < Memoria->cant_marcos; i++) {
         t_pagina* f = &Memoria->marcos[i];
 
         if (f->presente && f->modificado && f->archivo && f->tag) {
-            if (!enviar_marco_a_storage(i,query_id)) {
-                log_error(logger,"## Query %d: Error enviando página %d durante FLUSH GLOBAL",query_id, f->nro_pag_logica);
+            if (!enviar_marco_a_storage(i)) {
+                log_error(logger,"## Query %d: Error enviando página %d durante FLUSH GLOBAL",obtener_query_id(), f->nro_pag_logica);
                 return QI_ERR_STORAGE;
             }
         }
     }
-    log_info(logger, "## Query %d: FLUSH GLOBAL completado", query_id);
+    log_info(logger, "## Query %d: FLUSH GLOBAL completado", obtener_query_id());
     return QI_OK;
 }
 

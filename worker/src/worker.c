@@ -1,11 +1,12 @@
 #include <worker.h>
 
-extern int query_id;
+int query_id;
 extern char * query_path;
 extern int program_counter;
 sem_t * sem_hay_query;
 sem_t * sem_desalojo_waiter;
 list_struct_t * lista_queries;
+pthread_mutex_t * mutex_query_id;
 
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina);
@@ -36,6 +37,8 @@ void inicializarWorker(){
 
     sem_hay_query = inicializarSem(0);
     sem_desalojo_waiter = inicializarSem(0);
+
+    mutex_query_id = inicializarMutex();
 
     lista_queries = inicializarLista();
 
@@ -78,6 +81,23 @@ void levantarStorage(){
 
 }
 
+int obtener_query_id(){
+    
+    pthread_mutex_lock(mutex_query_id);
+    int returnvalue = query_id;
+    pthread_mutex_unlock(mutex_query_id);
+
+    return returnvalue;
+}
+
+void setear_query_id(int value){
+    
+    pthread_mutex_lock(mutex_query_id);
+    query_id = value;
+    pthread_mutex_unlock(mutex_query_id);
+
+}
+
 void *conexion_cliente_master(void *args){
     
 	do
@@ -105,7 +125,7 @@ void *conexion_cliente_master(void *args){
         case EXEC_QUERY:
             paquete_recv = recibir_paquete(socket_master);
             //hay que crear una global o guardarlo en algun lado
-            query_id = *(int *) list_remove(paquete_recv, 0);
+            setear_query_id(*(int *) list_remove(paquete_recv, 0));
             query_path = list_remove(paquete_recv, 0);
             program_counter = *(int *) list_remove(paquete_recv, 0);
 
