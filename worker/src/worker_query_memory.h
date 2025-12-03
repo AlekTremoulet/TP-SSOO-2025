@@ -65,7 +65,7 @@ void ocuapar_espacio(int victima,char * tag);
 void memoria_actualizar_tag( char* arch_o,  char* tag_o, char* arch_n,  char* tag_n);
 void memoria_invalidar_file_tag_completo(const char* archivo, const char* tag);
 void memoria_eliminar_commit(const char* archivo, const char* tag);
-void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam);
+void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam,int id_query);
 
 
 qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido,int id_query);
