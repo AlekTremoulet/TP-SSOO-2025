@@ -26,6 +26,9 @@ list_struct_t *workers_busy;        // elementos: worker_t*
 
 pthread_mutex_t m_id;
 
+static void posible_desalojo(query_t *q);
+
+
 int main(int argc, char* argv[]) {
     id_query_actual = 1;
     
@@ -205,6 +208,8 @@ void *handler_cliente(void *arg) {
                 "## Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <%d>",
                 archivo_recv, prioridad, id_asignado, obtener_nivel_multiprocesamiento());
 
+            posible_desalojo(q);
+ 
             // encolo al final -> FIFO
             encolar_query(cola_ready_queries, q, -1);
             // FIFO
@@ -648,4 +653,19 @@ void planificador_prioridades() {
         pthread_create(&th_wq, NULL, hilo_worker_query, dwq);
         pthread_detach(th_wq);
     }
+}
+
+static void posible_desalojo(query_t *q) {
+    if (strcmp(algo_planificacion, "PRIORIDADES") != 0) {
+        return;
+    }
+
+    query_t *peor = obtener_peor_query_exec();
+
+    if (peor == NULL) {
+        log_info(logger, "Llega Q <%d> (prio %d). EXEC está vacío.",  q->id_query, q->prioridad);
+        return;
+    }
+
+    log_info(logger, "Llega Q <%d> (prio %d). Peor en EXEC: <%d> (prio %d).", q->id_query, q->prioridad, peor->id_query, peor->prioridad);
 }

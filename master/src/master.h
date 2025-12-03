@@ -47,5 +47,6 @@ void planificador_prioridades();
 void *hilo_aging(void *arg);
 void *planificador(void * args);
 void *hilo_worker_query(void *arg);
+static void posible_desalojo(query_t *q);
 
 #endif
