@@ -20,14 +20,6 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < block_count; i++) {
         inicializar_bloque_fisico(i);
     }
-    //-hardcodeado para probar
-    Crear_file("archivo","tag",1);
-    Truncar_file("archivo","tag",10,1);    
-    Escrbir_bloque("archivo","tag",5, "camboya",1);
-    Leer_bloque("archivo","tag",5,2);
-    Crear_tag("archivo","archivo","tag","tag2",32);
-    Commit_tag("archivo","tag",47);
-    //-hardcodeado para probar
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -141,7 +133,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             char* arch_dest = list_remove(paquete_recv, 0);
             char* tag_dest = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Crear_tag(tag_ori,arch_dest,tag_ori,tag_dest,query_id);
+            Crear_tag(arch_ori,arch_dest,tag_ori,tag_dest,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_COMMIT:

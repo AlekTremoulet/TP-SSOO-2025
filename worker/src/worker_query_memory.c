@@ -180,12 +180,15 @@ static bool enviar_marco_a_storage(int marco) {
         return false;
     }
 
-    t_paquete* paquete = crear_paquete(OP_FLUSH);
+    int tmp_query_id = 2;// query id harcodeado >:()
+    t_paquete* paquete = crear_paquete(OP_WRITE);
     agregar_a_paquete(paquete, frame->archivo, strlen(frame->archivo) + 1);
     agregar_a_paquete(paquete, frame->tag, strlen(frame->tag) + 1);
     agregar_a_paquete(paquete, &frame->nro_pag_logica, sizeof(int));
     agregar_a_paquete(paquete, &Memoria->tam_pagina, sizeof(int));
     agregar_a_paquete(paquete, frame->data, Memoria->tam_pagina);
+    agregar_a_paquete(paquete, &tmp_query_id, sizeof(int)); // query id harcodeado >:()
+
 
     int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
@@ -232,10 +235,14 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
         libre = victima;
     }
 
-    t_paquete* paquete = crear_paquete(OP_SOLICITAR_PAGINAS);
+    int tmp_query_id = 2;// query id harcodeado >:()
+    t_paquete* paquete = crear_paquete(OP_READ);
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &nro_pagina, sizeof(int));
+    agregar_a_paquete(paquete, &Memoria->tam_pagina, sizeof(int));
+    agregar_a_paquete(paquete, &tmp_query_id, sizeof(int)); // query id harcodeado >:()
+
     int socket_storage = enviar_peticion_a_storage(paquete);
     eliminar_paquete(paquete);
 

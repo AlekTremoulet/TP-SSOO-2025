@@ -584,11 +584,11 @@ void Commit_tag(char* archivo, char* tag, int query_id) {
         if (config_has_property(hash_config, hash_calculado)) {
             char *id_bloque_preexistente = config_get_string_value(hash_config, hash_calculado);
             if (strcmp(id_bloque_actual, id_bloque_preexistente) != 0) {
-                char *path_bloque_a_unlinkear = string_from_format("%s/%s", dir_physical_blocks, nombre_fisico_actual);
-                char* ruta_preexistente = string_from_format("%s/%s/%s/logical_blocks/%06d.dat",dir_files, archivo,tag,atoi(id_bloque_actual));
+                char *path_bloque_a_unlinkear = string_from_format("%s/%s", dir_physical_blocks, id_bloque_preexistente);
+                char* ruta_preexistente = string_from_format("%s/%s/%s/logical_blocks/%06d.dat",dir_files, archivo,tag,i);
 
                 unlink(path_bloque_a_unlinkear);
-                link(ruta_preexistente,path_bloque_a_unlinkear);
+                link(path_bloque_a_unlinkear,ruta_preexistente);
 
                 log_info(logger,"<%d> - <%s>:<%s> Se eliminó el hard link del bloque lógico <%d> al bloque físico <%s>",
                 query_id, archivo, tag,i, path_bloque_a_unlinkear);
