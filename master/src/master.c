@@ -320,6 +320,55 @@ query_t *desencolar_query(list_struct_t *cola, int index){
     return q;
 }
 
+static void encolar_query_en_exec(query_t *q) {
+    encolar_query(cola_exec_queries, q, -1);
+}
+
+static void desencolar_query_de_exec(int id_query) {
+    pthread_mutex_lock(cola_exec_queries->mutex);
+
+    int size = list_size(cola_exec_queries->lista);
+    for (int i = 0; i < size; i++) {
+        query_t *q = list_get(cola_exec_queries->lista, i);
+        if (q->id_query == id_query) {
+            list_remove(cola_exec_queries->lista, i);
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(cola_exec_queries->mutex);
+}
+
+// peor Q = numero mas grande
+// no la saca de la cola, solo devuelve el puntero (o NULL si no hay nada)
+static query_t *obtener_peor_query_exec(void) {
+    pthread_mutex_lock(cola_exec_queries->mutex);
+
+    int size = list_size(cola_exec_queries->lista);
+    if (size == 0) {
+        pthread_mutex_unlock(cola_exec_queries->mutex);
+        return NULL;
+    }
+
+    int indice_peor = 0;
+    query_t *peor_query = list_get(cola_exec_queries->lista, 0);
+
+    for (int i = 1; i < size; i++) {
+        query_t *q = list_get(cola_exec_queries->lista, i);
+
+        // mayor numero = peor prioridad
+        if (q->prioridad > peor_query->prioridad) {
+            peor_query = q;
+            indice_peor = i;
+        }
+    }
+
+    log_debug(logger, "Peor Query en EXEC: id <%d> prioridad <%d> (indice %d)", peor_query->id_query, peor_query->prioridad, indice_peor);
+
+    pthread_mutex_unlock(cola_exec_queries->mutex);
+    return peor_query;
+} // por ej. si llega una Q con prioridad mejor y no hay worker libre se desaloja la peor en EXEC
+
 // ENUNCIADO FIFO:
 // Las ejecuciones de las Queries se irán asignando a cada Worker por orden de llegada.
 // Una vez que todos los Workers tengan una Query asignada se encolará el resto de las Queries en el estado READY.
@@ -361,6 +410,8 @@ void planificador_fifo() {
         dwq->worker = w;
         dwq->query  = q;
 
+        encolar_query_en_exec(q); // Q en EXEC
+
         encolar_worker(workers_busy, w, -1);
 
         // creo el thread para worker+query
@@ -395,10 +446,14 @@ void *hilo_worker_query(void *arg) {
         protocolo_socket cod = recibir_operacion(w->socket_worker);
 
         if (cod == -1){
+            desencolar_query_de_exec(q->id_query); // si el W se desconecto mientras ejecutaba la Q
+
             disminuir_cantidad_workers();
             free(w);
             query_finalizar(q, "desconexion de worker");
             log_info(logger, "## Se desconecta el Worker %d - Se finaliza la Query %d - Cantidad total de Workers: %d", w->id, q->id_query, obtener_cantidad_workers());
+        
+            return NULL; // se corta el hilo
         }
 
         switch (cod) {
@@ -432,6 +487,8 @@ void *hilo_worker_query(void *arg) {
 
                 // termino una query
 
+                desencolar_query_de_exec(q->id_query);
+
                 // reencolar worker como libre
                 encolar_worker(workers_libres, w, -1);
 
@@ -457,6 +514,8 @@ void *hilo_worker_query(void *arg) {
                 }
 
                 log_info(logger, "## Se desaloja la Query <%d> (<%d>) del Worker <%d> - Motivo: <PRIORIDAD>", q->id_query, q->prioridad, w->id);
+
+                desencolar_query_de_exec(q->id_query);
 
                 // reencolo la query en READY para que vuelva a planificarse
                 encolar_query(cola_ready_queries, q, -1);
@@ -576,6 +635,8 @@ void planificador_prioridades() {
         datos_worker_query_t *dwq = malloc(sizeof(datos_worker_query_t));
         dwq->worker = w;
         dwq->query  = q;
+
+        encolar_query_en_exec(q); // Q en EXEC
 
         // marco al W como ocupado
         encolar_worker(workers_busy, w, -1);

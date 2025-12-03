@@ -39,6 +39,8 @@ void encolar_worker(list_struct_t *cola, worker_t *w, int index);
 void encolar_query(list_struct_t *cola, query_t *q, int index);
 worker_t *desencolar_worker(list_struct_t *cola, int index);
 query_t *desencolar_query(list_struct_t *cola, int index);
+static void desencolar_query_de_exec(int id_query);
+static query_t *obtener_peor_query_exec(void);
 void planificador_fifo();
 static query_t *sacar_mejor_query_ready(void);
 void planificador_prioridades();
