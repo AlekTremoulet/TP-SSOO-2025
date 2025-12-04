@@ -35,7 +35,7 @@ void inicializar_paginas(){
         Memoria->marcos[i].nro_pag_logica = -1;
         Memoria->marcos[i].archivo = NULL;
         Memoria->marcos[i].tag = NULL;
-        Memoria->marcos[i].data = malloc(Memoria->tam_pagina);
+        Memoria->marcos[i].data = calloc(1, Memoria->tam_pagina);
         memset(Memoria->marcos[i].data, 0, Memoria->tam_pagina);
     }
 
@@ -409,7 +409,7 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,
         return QI_ERR_COMMIT_CERRADO;
     }
 
-    int longitud = (int)strlen(contenido);
+    int longitud = (int)strlen(contenido)+1;
     log_info(logger, "## Query %d: WRITE en Memoria %s:%s desde %d (%d bytes)", obtener_query_id(), archivo, tag, direccion_base, longitud);
 
     if (direccion_base < 0 || direccion_base + longitud > Memoria->tam_total) {

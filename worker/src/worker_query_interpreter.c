@@ -7,7 +7,7 @@ extern int socket_master;
 extern sem_t * sem_desalojo_waiter;
 
 extern char * ip_storage, *puerto_storage;
-extern char * socket_master;
+extern int socket_master;
 
 
 qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido);
@@ -243,7 +243,7 @@ void loop_principal(){
             if (!ejecutar_query(query_path)){
                 sem_post(sem_hay_query);
             }else {
-                enviar_error_a_master(WORKER_FINALIZACION,"Finalizando query");
+                enviar_error_a_master(WORKER_FINALIZACION,"Query END");
             }
         }  
     }
@@ -527,7 +527,7 @@ int enviar_peticion_a_storage(t_paquete * paquete){
     return socket_storage;
 }
 
-int enviar_error_a_master(int codigo,char* error){
+int enviar_error_a_master(protocolo_socket codigo,char* error){
     t_paquete* paquete = crear_paquete(codigo);
     agregar_a_paquete(paquete, error, strlen(error) + 1);
     enviar_paquete(paquete, socket_master);

@@ -420,9 +420,6 @@ void *hilo_worker_query(void *arg) {
             case WORKER_FINALIZACION: {
 
                 t_list *paquete = recibir_paquete(w->socket_worker);
-                if (paquete != NULL) {
-                    list_destroy_and_destroy_elements(paquete, free);
-                }
                 char * motivo = list_remove(paquete, 0);
             
                 log_info(logger, "## Se terminó la Query <%d> en el Worker <%d>", q->id_query, w->id);

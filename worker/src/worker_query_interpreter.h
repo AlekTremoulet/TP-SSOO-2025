@@ -45,10 +45,11 @@ qi_status_t ejecutar_FLUSH(char* archivo, char* tag);
 qi_status_t ejecutar_DELETE(char* archivo, char* tag);
 
 int enviar_peticion_a_storage(t_paquete *paquete);
-
 void loop_principal();
 
 int obtener_desalojo_flag();
 void setear_desalojo_flag(int value);
+
+int enviar_error_a_master(protocolo_socket codigo, char *error);
 
 #endif
