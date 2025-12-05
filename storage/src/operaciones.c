@@ -557,56 +557,86 @@ void Eliminar_tag(char * Origen, char* tag, int query_id){
 }
 
 void Commit_tag(char* archivo, char* tag, int query_id) {
-    char* ruta_archivo = string_from_format("%s/%s/%s/metadata.config", dir_files, archivo, tag);
-    t_config *config_archivo = config_create(ruta_archivo);
+    char* ruta_metadata = string_from_format("%s/%s/%s/metadata.config", dir_files, archivo, tag);
+    t_config *config_archivo = config_create(ruta_metadata);
 
     if (config_archivo == NULL) {
-        log_error(logger, "No se pudo abrir el config en: %s", ruta_archivo);
-        free(ruta_archivo);
+        log_error(logger, "No se pudo abrir el config en: %s", ruta_metadata);
+        free(ruta_metadata);
         return;
+    }
+
+    if (config_has_property(config_archivo, "ESTADO")) {
+        char *estado_actual = config_get_string_value(config_archivo, "ESTADO");
+        if (strcmp(estado_actual, "COMMITED") == 0) {
+            log_info(logger, "<%d> - El Tag <%s>:<%s> ya está COMMITED. Fin.", query_id, archivo, tag);
+            config_destroy(config_archivo);
+            free(ruta_metadata);
+            return;
+        }
     }
 
     t_config *hash_config = config_create(path_hash);
     if (!hash_config) {
         FILE *f = fopen(path_hash, "w");
-        fclose(f);
+        if(f) fclose(f);
         hash_config = config_create(path_hash);
     }
 
-    char **bloques = config_get_array_value(config_archivo, "Blocks"); 
-    bool hubo_cambios_reapuntamiento = false;
+    char **bloques = config_get_array_value(config_archivo, "Blocks");
+    bool hubo_cambios = false;
 
     for (int i = 0; bloques[i] != NULL; i++) {
-        if (strcmp("0", bloques[i])){
-            continue;
-        }
+        
+        if (strcmp(bloques[i], "0") == 0) continue; 
 
-        char *id_bloque_actual = bloques[i]; 
-        char *nombre_fisico_actual = string_from_format("block%04d", atoi(id_bloque_actual));
+        char *id_bloque_actual_str = bloques[i];
+        int id_bloque_actual_int = atoi(id_bloque_actual_str);
+        char *nombre_fisico_actual = string_from_format("block%04d", id_bloque_actual_int);
 
-        char *hash_calculado = retornar_hash(nombre_fisico_actual);
+        char *hash_calculado = retornar_hash(nombre_fisico_actual); 
 
         if (config_has_property(hash_config, hash_calculado)) {
-            char *id_bloque_preexistente = config_get_string_value(hash_config, hash_calculado);
-            if (strcmp(id_bloque_actual, id_bloque_preexistente) != 0) {
-                char *path_bloque_a_unlinkear = string_from_format("%s/%s", dir_physical_blocks, id_bloque_preexistente);
-                char* ruta_preexistente = string_from_format("%s/%s/%s/logical_blocks/%06d.dat",dir_files, archivo,tag,i);
+            
+            char *nombre_fisico_preexistente = config_get_string_value(hash_config, hash_calculado);
 
-                unlink(path_bloque_a_unlinkear);
-                link(id_bloque_preexistente,ruta_preexistente);
-
-                log_info(logger,"<%d> - <%s>:<%s> Se eliminó el hard link del bloque lógico <%d> al bloque físico <%s>",
-                query_id, archivo, tag,i, path_bloque_a_unlinkear);
-
-                free(path_bloque_a_unlinkear);
-
-                free(bloques[i]);
-                bloques[i] = strdup(id_bloque_preexistente);
+            if (strcmp(nombre_fisico_actual, nombre_fisico_preexistente) != 0) {
                 
-                hubo_cambios_reapuntamiento = true;
+                char *path_fisico_actual = string_from_format("%s/%s.dat", dir_physical_blocks, nombre_fisico_actual);
+                char *path_fisico_preexistente = string_from_format("%s/%s.dat", dir_physical_blocks, nombre_fisico_preexistente);
+                
+                char *path_logico = string_from_format("%s/%s/%s/logical_blocks/%06d.dat", dir_files, archivo, tag, i);
+
+                log_info(logger, "<%d> - <%s>:<%s> Se eliminó el hard link del bloque lógico <%d> al bloque físico <%s>",
+                        query_id, archivo, tag, i, nombre_fisico_actual);
+
+                unlink(path_logico);
+                unlink(path_fisico_actual);
+                
+                if (link(path_fisico_preexistente, path_logico) < 0) {
+                    log_error(logger, "Error linkeando %s a %s", path_fisico_preexistente, path_logico);
+                }
+
+                liberar_espacio_bitmap(id_bloque_actual_int);
+
+                log_info(logger, "<%d> - <%s>:<%s> Bloque Lógico <%d> se reasigna de <%s> a <%s>",
+                         query_id, archivo, tag, i, nombre_fisico_actual, nombre_fisico_preexistente);
+
+
+                int id_nuevo_int;
+                sscanf(nombre_fisico_preexistente, "block%d", &id_nuevo_int);
+                
+                free(bloques[i]);
+                bloques[i] = string_itoa(id_nuevo_int);
+                
+                hubo_cambios = true;
+
+                free(path_fisico_actual);
+                free(path_fisico_preexistente);
+                free(path_logico);
             }
         } else {
-            config_set_value(hash_config, hash_calculado, id_bloque_actual);
+            config_set_value(hash_config, hash_calculado, nombre_fisico_actual);
             config_save(hash_config);
         }
 
@@ -614,24 +644,20 @@ void Commit_tag(char* archivo, char* tag, int query_id) {
         free(hash_calculado);
     }
 
-    if (hubo_cambios_reapuntamiento) {
-        char *lista_bloques_str = string_array_to_string(bloques); 
+    if (hubo_cambios) {
+        char *lista_bloques_str = string_array_to_string(bloques);
         config_set_value(config_archivo, "Blocks", lista_bloques_str);
         free(lista_bloques_str);
     }
 
     config_set_value(config_archivo, "ESTADO", "COMMITED");
-
-    if (config_save(config_archivo) < 0) {
-        log_error(logger, "Error al guardar metadata.config");
-    }
-
-    log_info(logger, "<%d> - Commit de File:Tag <%s>:<%s>", query_id, archivo, tag);
+    config_save(config_archivo);
+    log_info(logger, "<%d> - Commit de File:Tag %s:%s",query_id,archivo, tag);
 
     string_array_destroy(bloques);
     config_destroy(hash_config);
     config_destroy(config_archivo);
-    free(ruta_archivo);
+    free(ruta_metadata);
 }
 
 
