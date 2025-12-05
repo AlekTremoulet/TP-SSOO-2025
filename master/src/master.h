@@ -16,6 +16,7 @@ extern int id_query_actual;
 typedef struct {
     int id;
     int socket_worker;   // socket del Worker para mandarle la tarea al Worker: path + id_query
+    int query_id;
 } worker_t;
 
 // los datos que necesito pasarle al thread
@@ -48,5 +49,7 @@ void *hilo_aging(void *arg);
 void *planificador(void * args);
 void *hilo_worker_query(void *arg);
 static void posible_desalojo(query_t *q);
+static bool hay_workers_libres(void);
+static worker_t *buscar_worker_por_query_id(int id_query);
 
 #endif

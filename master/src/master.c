@@ -183,7 +183,7 @@ void *handler_cliente(void *arg) {
             // path (char*)
             char *archivo_recv = list_remove(paquete_recv, 0);
 
-            // prioridad: viene como void* a un int -> casteo y desreferencio
+            // prioridad: viene como void* a un int - casteo y desreferencio
             int *prioridad_ptr = list_remove(paquete_recv, 0);
             int prioridad = *prioridad_ptr;
 
@@ -191,8 +191,6 @@ void *handler_cliente(void *arg) {
             pthread_mutex_lock(&m_id);
             id_asignado = id_query_actual++;
             pthread_mutex_unlock(&m_id);
-
-            
 
             enviar_paquete_ok(socket_nuevo);
 
@@ -224,12 +222,14 @@ void *handler_cliente(void *arg) {
             int *id_ptr = list_remove(paquete_recv, 0);
             int worker_id = *id_ptr;
 
-            enviar_paquete_ok(socket_nuevo);
+            //enviar_paquete_ok(socket_nuevo);
 
             // FIFO - registro al worker como libre
             worker_t *w = malloc(sizeof(worker_t));
             w->id            = worker_id;
             w->socket_worker = socket_nuevo;       // guardo la conexion al worker
+
+            w->query_id = -1; // inicializo el w
 
             encolar_worker(workers_libres, w, -1);
             // FIFO
@@ -244,9 +244,7 @@ void *handler_cliente(void *arg) {
 
         // resultado
         case WORKER_FINALIZACION: {
-            // TODO: leer (id_query, status) del paquete
-            // TODO: re-encolar este worker en workers_libres
-            // TODO: buscar socket_qc por id_query y enviar DEVOLUCION_QUERY
+        
             break;
         }
 
@@ -436,12 +434,14 @@ void *hilo_worker_query(void *arg) {
     worker_t *w = dwq->worker;
     query_t  *q = dwq->query;
 
+    w->query_id = q->id_query; // este w ejecuta esta q
+
     log_info(logger, "## Se envía la Query <%d> (PRIORIDAD <%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
 
     // le mando al W el path + id_query
-    t_paquete *p = crear_paquete(PARAMETROS_QUERY);
-    agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1); // envio path
+    t_paquete *p = crear_paquete(EXEC_QUERY);
     agregar_a_paquete(p, &(q->id_query), sizeof(int));        // envio id
+    agregar_a_paquete(p, q->archivo, strlen(q->archivo) + 1); // envio path
     agregar_a_paquete(p, &(q->pc), sizeof(int)); //envio pc
     enviar_paquete(p, w->socket_worker);
     eliminar_paquete(p);
@@ -478,6 +478,8 @@ void *hilo_worker_query(void *arg) {
 
                 query_enviar_lectura(q, buffer, size);
 
+                list_destroy_and_destroy_elements(paquete, free);
+
                 break;
             }
 
@@ -494,6 +496,9 @@ void *hilo_worker_query(void *arg) {
 
                 desencolar_query_de_exec(q->id_query);
 
+                // el worker ya no ejecuta ninguna query
+                w->query_id = -1;
+
                 // reencolar worker como libre
                 encolar_worker(workers_libres, w, -1);
 
@@ -507,7 +512,7 @@ void *hilo_worker_query(void *arg) {
                 return NULL;
             }
 
-            case WORKER_DESALOJO: {
+            case DESALOJO: {
                 
                 t_list *paquete = recibir_paquete(w->socket_worker);
 
@@ -525,6 +530,9 @@ void *hilo_worker_query(void *arg) {
                 // reencolo la query en READY para que vuelva a planificarse
                 encolar_query(cola_ready_queries, q, -1);
 
+                // el worker deja de tener query asignada
+                w->query_id = -1;
+
                 // reencolo el worker como libre
                 encolar_worker(workers_libres, w, -1);
 
@@ -541,6 +549,7 @@ void *hilo_worker_query(void *arg) {
                 free(q);
                 free(dwq);
 
+                w->query_id = -1; 
                 encolar_worker(workers_libres, w, -1);
 
                 break;
@@ -655,17 +664,71 @@ void planificador_prioridades() {
     }
 }
 
-static void posible_desalojo(query_t *q) {
+static void posible_desalojo(query_t *q_nueva) {
     if (strcmp(algo_planificacion, "PRIORIDADES") != 0) {
+        return;
+    }
+
+    // si hay un w libre no desalojo
+    if (hay_workers_libres()) {
+        log_info(logger, "Q <%d> (prio %d). Hay workers libres", q_nueva->id_query, q_nueva->prioridad);
         return;
     }
 
     query_t *peor = obtener_peor_query_exec();
 
     if (peor == NULL) {
-        log_info(logger, "Llega Q <%d> (prio %d). EXEC está vacío.",  q->id_query, q->prioridad);
+        log_info(logger, "Q <%d> (prio %d). EXEC vacio, no hay desalojo.",  q_nueva->id_query, q_nueva->prioridad);
         return;
     }
 
-    log_info(logger, "Llega Q <%d> (prio %d). Peor en EXEC: <%d> (prio %d).", q->id_query, q->prioridad, peor->id_query, peor->prioridad);
+    log_info(logger, "Q <%d> (prio %d). Peor en EXEC: <%d> (prio %d).", q_nueva->id_query, q_nueva->prioridad, peor->id_query, peor->prioridad);
+
+    // si la nueva no es mejor que la peor en exec (menor numero = mejor prioridad)
+    if (q_nueva->prioridad >= peor->prioridad) {
+        log_info(logger, "La Query <%d> no mejora la prioridad de la peor en EXEC. No se desaloja.", q_nueva->id_query);
+        return;
+    }
+
+    // la nueva es mejor que la peor en exec y no hay workers libres
+    worker_t *w_a_desalojar = buscar_worker_por_query_id(peor->id_query);
+    if (w_a_desalojar == NULL) {
+        log_error(logger, "No hay Worker que ejecute la Query <%d> para desalojar.", peor->id_query);
+        return;
+    }
+
+    log_info(logger, "Se desaloja la Query <%d> del Worker <%d> para ejecutar la nueva Query <%d> (prio mejor).", peor->id_query, w_a_desalojar->id, q_nueva->id_query);
+
+    t_paquete *paquete_desalojo = crear_paquete(DESALOJO);
+    enviar_paquete(paquete_desalojo, w_a_desalojar->socket_worker);
+    eliminar_paquete(paquete_desalojo);
+}
+
+static bool hay_workers_libres(void) {
+    bool hay_w_libres = false;
+
+    pthread_mutex_lock(workers_libres->mutex);
+    hay_w_libres = !list_is_empty(workers_libres->lista);
+    pthread_mutex_unlock(workers_libres->mutex);
+
+    return hay_w_libres;
+}
+
+static worker_t *buscar_worker_por_query_id(int id_query) {
+    worker_t *w_encontrado = NULL;
+
+    pthread_mutex_lock(workers_busy->mutex);
+
+    int size = list_size(workers_busy->lista);
+    for (int i = 0; i < size; i++) {
+        worker_t *w = list_get(workers_busy->lista, i);
+        if (w->query_id == id_query) {
+            w_encontrado = w;
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(workers_busy->mutex);
+
+    return w_encontrado;
 }
