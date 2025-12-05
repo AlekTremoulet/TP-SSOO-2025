@@ -222,7 +222,7 @@ void *handler_cliente(void *arg) {
             int *id_ptr = list_remove(paquete_recv, 0);
             int worker_id = *id_ptr;
 
-            //enviar_paquete_ok(socket_nuevo);
+            enviar_paquete_ok(socket_nuevo);
 
             // FIFO - registro al worker como libre
             worker_t *w = malloc(sizeof(worker_t));
