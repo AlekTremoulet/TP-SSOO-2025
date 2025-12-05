@@ -181,7 +181,7 @@ static bool enviar_marco_a_storage(int marco) {
         return false;
     }
 
-    int query_id_temp = obtener_query_id();
+    int query_id_temp = obtener_query_id();  
 
     t_paquete* paquete = crear_paquete(OP_WRITE);
     agregar_a_paquete(paquete, frame->archivo, strlen(frame->archivo) + 1);
@@ -437,6 +437,7 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,
         int a_escribir = (bytes_restantes <= espacio_en_pagina) ? bytes_restantes : espacio_en_pagina;
         memcpy((char*)Memoria->marcos[marco].data + offset, contenido + (longitud - bytes_restantes), a_escribir);
 
+
         Memoria->marcos[marco].modificado = true;
         Memoria->marcos[marco].uso = true;
         Memoria->marcos[marco].ult_usado = Memoria->time_count++;
@@ -529,10 +530,7 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag) {
     bool any_sent = false;
     for (int i = 0; i < Memoria->cant_marcos; i++) {
         t_pagina* f = &Memoria->marcos[i];
-        if (f->presente && f->modificado &&
-            f->archivo && f->tag &&
-            strcmp(f->archivo, archivo) == 0 &&
-            strcmp(f->tag, tag) == 0) {
+        if (f->presente && f->modificado && f->archivo && f->tag && strcmp(f->archivo, archivo) == 0 && strcmp(f->tag, tag) == 0) {
             // enviar marco i a Storage
             if (!enviar_marco_a_storage(i)) {
                 log_error(logger, "## Query %d: Error enviando pagina %d durante FLUSH", obtener_query_id(), f->nro_pag_logica);

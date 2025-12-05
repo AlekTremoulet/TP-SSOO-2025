@@ -292,7 +292,7 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
 
                     FILE* f_bloque = fopen(path_nuevo_bloque_fisico, "w");
                     if (f_bloque != NULL) {
-                        fwrite(contenido, sizeof(char), strlen(contenido), f_bloque);
+                        fwrite(contenido, sizeof(char), tam_bloque, f_bloque);
                         fclose(f_bloque);
                     }
 
@@ -577,6 +577,10 @@ void Commit_tag(char* archivo, char* tag, int query_id) {
     bool hubo_cambios_reapuntamiento = false;
 
     for (int i = 0; bloques[i] != NULL; i++) {
+        if (strcmp("0", bloques[i])){
+            continue;
+        }
+
         char *id_bloque_actual = bloques[i]; 
         char *nombre_fisico_actual = string_from_format("block%04d", atoi(id_bloque_actual));
 
@@ -589,7 +593,7 @@ void Commit_tag(char* archivo, char* tag, int query_id) {
                 char* ruta_preexistente = string_from_format("%s/%s/%s/logical_blocks/%06d.dat",dir_files, archivo,tag,i);
 
                 unlink(path_bloque_a_unlinkear);
-                link(path_bloque_a_unlinkear,ruta_preexistente);
+                link(id_bloque_preexistente,ruta_preexistente);
 
                 log_info(logger,"<%d> - <%s>:<%s> Se eliminó el hard link del bloque lógico <%d> al bloque físico <%s>",
                 query_id, archivo, tag,i, path_bloque_a_unlinkear);

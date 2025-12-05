@@ -426,7 +426,7 @@ qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* t
         return QI_ERR_STORAGE;
     }
 
-    memoria_actualizar_tag(arch_ori, tag_ori, arch_dest, tag_dest);
+    // memoria_actualizar_tag(arch_ori, tag_ori, arch_dest, tag_dest);
 
     // Mover commit origen -> destino
     if (origen_comiteado) {
