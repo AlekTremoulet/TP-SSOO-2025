@@ -1,6 +1,6 @@
 #include "operaciones.h"
 
-char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
+char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo,int query_id) {
     t_archivo_creado archivo;
     archivo.nombre = nombre_archivo;
     archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
@@ -19,6 +19,13 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
 
     char *directorio_config_asociada = cargar_archivo("",config_asociada);
     log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
+
+    DIR* dir = opendir(archivo.ruta_tag);
+    if (!dir) {
+        closedir(dir);
+        return "Error_create";
+    }
+    closedir(dir);
 
     char *Estado = "WORK IN PROGRESS";
     char *Blocks = "[]";
@@ -50,6 +57,7 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
     char *dir_logical_blocks = malloc(strlen(directorio_tag) + strlen("/logical_blocks") + 1);
     sprintf(dir_logical_blocks, "%s/%s", directorio_tag,"logical_blocks");
     crear_directorio(dir_logical_blocks);
+    log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag_archivo);
 
     return dir_logical_blocks;
 }
@@ -100,8 +108,13 @@ char* crear_directorio(char* path_a_crear) {
 
 
 void Crear_file(char* archivo,char* tag, int query_id){
-    crear_archivo_en_FS(archivo, tag);
-    log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag);
+    char * crear_archivo_status = crear_archivo_en_FS(archivo, tag);
+    if (strcmp(crear_archivo_status,"Error_create")){
+        log_info(logger,"Error al crear el archivo");
+    } else {
+        log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag);
+    }
+    
 }; 
 
 void Truncar_file(char* archivo, char* tag, int tamanio, int query_id) 

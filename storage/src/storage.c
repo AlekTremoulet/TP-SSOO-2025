@@ -95,7 +95,8 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             archivo = list_remove(paquete_recv, 0); 
             tag = list_remove(paquete_recv, 0); 
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Crear_file(archivo,tag,query_id);
+            crear_archivo_en_FS(archivo,tag,query_id);
+            enviar_paquete_ok(socket_nuevo);
             break;
         case OP_TRUNCATE:
             paquete_recv = recibir_paquete(socket_nuevo);
