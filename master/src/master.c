@@ -239,12 +239,6 @@ void *handler_cliente(void *arg) {
             break;
         }
 
-        // resultado
-        case WORKER_FINALIZACION: {
-        
-            break;
-        }
-
         default: {
             // consumo payload si vino algo, para no dejar basura
             t_list *basura = recibir_paquete(socket_nuevo);

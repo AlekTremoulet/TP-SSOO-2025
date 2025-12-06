@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["query.config","ESCRITURA_ARCHIVO_COMMITED",1],
+      "args": ["query.config","FIFO_4",1],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
