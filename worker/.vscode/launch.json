@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["worker_plani_2.config",2],
+      "args": ["P_errores.config",1],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

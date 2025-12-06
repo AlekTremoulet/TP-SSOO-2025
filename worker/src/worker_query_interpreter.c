@@ -349,11 +349,6 @@ log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", obtener_query_id()
         enviar_error_a_master(WORKER_FINALIZACION,"Storage rechazó TRUNCATE");
         return QI_ERR_STORAGE;
     }
-    else if (ERR_ESCRITURA_ARCHIVO_COMMITED){
-        log_error(logger, "ERROR El %s:%s ya tiene COMMIT Query id %d",archivo, tag, obtener_query_id());
-        return QI_ERR_STORAGE;
-    }
-
     // TRUNCATE aceptado -> actualizar memoria
     memoria_truncar(archivo, tag, nuevo_tamanio);
 
