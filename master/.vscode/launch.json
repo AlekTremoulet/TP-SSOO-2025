@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["master_plani_fifo"],
+      "args": ["master_plani_priori"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

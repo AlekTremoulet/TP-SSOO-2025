@@ -399,7 +399,7 @@ void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam)
     log_info(logger, "Memoria: TRUNCATE finalizado para %s:%s, nuevo tamaño=%d",archivo, tag, nuevo_tam);
 }
 
-qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,char * contenido){
+qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_logica,char * contenido){
     if (!Memoria) 
         return QI_ERR_FILE;
     if (!archivo || !tag || !contenido) 
@@ -410,21 +410,21 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,
     }
 
     int longitud = (int)strlen(contenido)+1;
-    log_info(logger, "## Query %d: WRITE en Memoria %s:%s desde %d (%d bytes)", obtener_query_id(), archivo, tag, direccion_base, longitud);
+    log_info(logger, "## Query %d: WRITE en Memoria %s:%s desde %d (%d bytes)", obtener_query_id(), archivo, tag, dir_logica, longitud);
 
-    if (direccion_base < 0 || direccion_base + longitud > Memoria->tam_total) {
-        log_error(logger, "## Query %d: WRITE fuera de rango (dir %d len %d, tam %d)", obtener_query_id(), direccion_base, longitud, Memoria->tam_total);
+    if (dir_logica < 0 || longitud <= 0) {
+        log_error(logger, "## Query %d: WRITE fuera de rango (dir %d len %d)", obtener_query_id(), dir_logica, longitud);
         return QI_ERR_PARSE;
     }
 
-    if (!asegurar_paginas_cargadas(archivo, tag, direccion_base, longitud)) {
+    if (!asegurar_paginas_cargadas(archivo, tag, dir_logica, longitud)) {
         log_error(logger, "## Query %d: Error al obtener páginas necesarias desde Storage", obtener_query_id());
         return QI_ERR_STORAGE;
     }
 
     // Escribir por partes en cada página
     int bytes_restantes = longitud;
-    int cursor_logico = direccion_base;
+    int cursor_logico = dir_logica;
     while (bytes_restantes > 0) {
         int p = direccion_a_pagina(cursor_logico);
         int offset = offset_en_pagina(cursor_logico);

@@ -182,10 +182,6 @@ void *conexion_cliente_master(void *args){
 
             setear_desalojo_flag(true);
 
-            pthread_mutex_lock(lista_queries->mutex);
-            list_destroy_and_destroy_elements(lista_queries->lista, free);
-            pthread_mutex_unlock(lista_queries->mutex);
-
             t_paquete * paquete_send = crear_paquete(DESALOJO);
             agregar_a_paquete(paquete_send, &program_counter, sizeof(int));
 
