@@ -33,7 +33,7 @@ extern char * path_hash;
 extern char* error_storage;
 //Operaciones
 
-
+void Crear_file(char* archivo,char* tag, int query_id);
 void Truncar_file(char* archivo, char* tag, int tamanio, int query_id); 
 void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id); 
 char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id); 
