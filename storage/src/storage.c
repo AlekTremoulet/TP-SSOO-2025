@@ -103,7 +103,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             archivo = list_remove(paquete_recv, 0); 
             tag = list_remove(paquete_recv, 0); 
             query_id = *(int*) list_remove(paquete_recv, 0);
-            crear_archivo_en_FS(archivo,tag,query_id);
+            Crear_file(archivo,tag,query_id);
             enviar_paquete_ok(socket_nuevo);
             break;
         case OP_TRUNCATE:
@@ -255,7 +255,7 @@ void inicializar_bloque_fisico(int numero_bloque){
 }
 
 void inicializar_bloques_logicos(){
-    char * Base = crear_archivo_en_FS("initial_file","BASE",0); //falta ver que este archivo NO se pueda borrar
+    char * Base = crear_archivo_en_FS("initial_file","BASE"); //falta ver que este archivo NO se pueda borrar
     char *dir_logical_base = malloc(strlen(Base) + strlen("/000000.dat") + 1);
     char *dir_phisical_base = malloc(strlen(dir_physical_blocks) + strlen("/block0000.dat") + 1);
 

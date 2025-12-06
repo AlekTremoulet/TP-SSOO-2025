@@ -1,6 +1,6 @@
 #include "operaciones.h"
 
-char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo,int query_id) {
+char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
     t_archivo_creado archivo;
     archivo.nombre = nombre_archivo;
     archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
@@ -57,7 +57,6 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo,int query_id)
     char *dir_logical_blocks = malloc(strlen(directorio_tag) + strlen("/logical_blocks") + 1);
     sprintf(dir_logical_blocks, "%s/%s", directorio_tag,"logical_blocks");
     crear_directorio(dir_logical_blocks);
-    log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag_archivo);
 
     return dir_logical_blocks;
 }
