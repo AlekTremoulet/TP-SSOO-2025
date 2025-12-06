@@ -240,10 +240,11 @@ void loop_principal(){
             setear_desalojo_flag(false);
 
         }else {
-            if (!ejecutar_query(query_path)){
+            int status = ejecutar_query(query_path);
+            if (!status){
                 sem_post(sem_hay_query);
             }else {
-                enviar_error_a_master(WORKER_FINALIZACION,"Query END");
+                memoria_flush_global();
             }
         }  
     }
@@ -278,7 +279,8 @@ int ejecutar_query(const char* path_query) {
     log_info(logger, "## Query %d: - Instrucción realizada: %s", obtener_query_id(), linea);
 
     if (st == QI_END) {
-        log_info(logger, "## Query %d: Query finalizada correctamente", obtener_query_id());        
+        log_info(logger, "## Query %d: Query finalizada correctamente", obtener_query_id());   
+        enviar_error_a_master(WORKER_FINALIZACION,"Query END");     
         return 1;
     }
 
@@ -289,7 +291,10 @@ int ejecutar_query(const char* path_query) {
 
     program_counter++;
 
-    return 0;
+    if (st == QI_OK){
+        return 0;
+    }else return 1;
+    
 
     free(linea);
 }
