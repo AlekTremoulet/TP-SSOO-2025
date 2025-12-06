@@ -200,12 +200,17 @@ static bool enviar_marco_a_storage(int marco) {
         frame->modificado = false;
         log_debug(logger, "Marco %d (p.%d %s:%s) enviado a Storage y marcado limpio",marco, frame->nro_pag_logica, frame->archivo, frame->tag);
         return true;
-    } else {
+    } 
+    else if (ERR_ESCRITURA_ARCHIVO_COMMITED){
+        log_error(logger, "ERROR El archivo ya tiene COMMIT");
+        return false;
+    }
+    else {
         log_error(logger, "Error al enviar marco %d a Storage", marco);
+        enviar_error_a_master(resp,"Error al enviar marco");
         return false;
     }
 }
-
 static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     int existe = buscar_marco_por_pagina(archivo, tag, nro_pagina);
     if (existe != -1) 
@@ -404,10 +409,6 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,
         return QI_ERR_FILE;
     if (!archivo || !tag || !contenido) 
         return QI_ERR_PARSE;
-    if (hubo_COMMIT_no_se_puede_WRITE(archivo, tag)){
-        log_error(logger, "WRITE rechazado: %s:%s ya tiene COMMIT", archivo, tag);
-        return QI_ERR_COMMIT_CERRADO;
-    }
 
     int longitud = (int)strlen(contenido)+1;
     log_info(logger, "## Query %d: WRITE en Memoria %s:%s desde %d (%d bytes)", obtener_query_id(), archivo, tag, direccion_base, longitud);
@@ -450,16 +451,7 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int direccion_base,
     return QI_OK;
 }
 
-bool hubo_COMMIT_no_se_puede_WRITE(const char* archivo, const char* tag) {
-    for (int i = 0; i < list_size(filetag_commiteados); i++) {
-        t_commit* ft = list_get(filetag_commiteados, i);
-        if (strcmp(ft->archivo, archivo) == 0 &&
-            strcmp(ft->tag, tag) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
+
 
 qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio) {
     if (!Memoria) 
@@ -531,7 +523,6 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag) {
     for (int i = 0; i < Memoria->cant_marcos; i++) {
         t_pagina* f = &Memoria->marcos[i];
         if (f->presente && f->modificado && f->archivo && f->tag && strcmp(f->archivo, archivo) == 0 && strcmp(f->tag, tag) == 0) {
-            // enviar marco i a Storage
             if (!enviar_marco_a_storage(i)) {
                 log_error(logger, "## Query %d: Error enviando pagina %d durante FLUSH", obtener_query_id(), f->nro_pag_logica);
                 return QI_ERR_STORAGE;
