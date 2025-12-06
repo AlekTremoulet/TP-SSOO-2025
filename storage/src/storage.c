@@ -1,7 +1,15 @@
 #include <storage.h>
 
+char * archivo_config;
+
 int main(int argc, char* argv[]) {
     pthread_t tid_server_mh_worker;
+
+    archivo_config = malloc(strlen(argv[1])+strlen("./")+strlen(".config")+1);
+
+    strcpy(archivo_config, "./");
+    strcat(archivo_config, argv[1]);
+    strcat(archivo_config, ".config");
 
     levantarConfig();
     if (strcmp(fresh_start, "TRUE") == 0){
@@ -32,7 +40,7 @@ int main(int argc, char* argv[]) {
 
 void levantarConfig(){
 
-    config = config_create("./storage.config");
+    config = config_create(archivo_config);
     char *value = config_get_string_value(config, "LOG_LEVEL");
     current_log_level = log_level_from_string(value);
     puerto = config_get_string_value(config, "PUERTO_ESCUCHA");
@@ -239,7 +247,7 @@ void inicializar_bloque_fisico(int numero_bloque){
 }
 
 void inicializar_bloques_logicos(){
-    char * Base = crear_archivo_en_FS("initial_file","BASE"); //falta ver que este archivo NO se pueda borrar
+    char * Base = crear_archivo_en_FS("initial_file","BASE",0); //falta ver que este archivo NO se pueda borrar
     char *dir_logical_base = malloc(strlen(Base) + strlen("/000000.dat") + 1);
     char *dir_phisical_base = malloc(strlen(dir_physical_blocks) + strlen("/block0000.dat") + 1);
 
