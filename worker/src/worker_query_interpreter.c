@@ -33,7 +33,7 @@ void memoria_eliminar_commit(const char* archivo, const char* tag);
 void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam);
 
 qi_status_t memoria_flush_global();
-bool hubo_COMMIT_no_se_puede_WRITE(const char* archivo, const char* tag);
+
 
 int obtener_query_id();
 
@@ -324,12 +324,7 @@ qi_status_t ejecutar_CREATE(char* archivo, char* tag) {
 qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int nuevo_tamanio) {
 log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", obtener_query_id(), archivo, tag, nuevo_tamanio);
 
-    // Validar COMMIT
-    if (hubo_COMMIT_no_se_puede_WRITE(archivo, tag)) {
-        log_error(logger,"## Query %d: TRUNCATE prohibido: %s:%s tiene COMMIT",obtener_query_id(), archivo, tag);
-        enviar_error_a_master(WORKER_FINALIZACION,"TRUNCATE prohibido porque tiene COMMIT");
-        return QI_ERR_COMMIT_CERRADO;
-    }
+
 
     int query_id_temp = obtener_query_id();
 
@@ -347,6 +342,10 @@ log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", obtener_query_id()
     if (resp != OK) {
         log_error(logger,"## Query %d: Storage rechazó TRUNCATE %s:%s",obtener_query_id(), archivo, tag);
         enviar_error_a_master(WORKER_FINALIZACION,"Storage rechazó TRUNCATE");
+        return QI_ERR_STORAGE;
+    }
+    else if (ERR_ESCRITURA_ARCHIVO_COMMITED){
+        log_error(logger, "ERROR El %s:%s ya tiene COMMIT Query id %d",archivo, tag, obtener_query_id());
         return QI_ERR_STORAGE;
     }
 
@@ -395,15 +394,6 @@ qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio)
 }
 
 qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* tag_dest) {
-    //  Validar COMMIT destino
-    if (hubo_COMMIT_no_se_puede_WRITE(arch_dest, tag_dest)) {
-        log_error(logger,"## Query %d: TAG no permitido: destino %s:%s tiene COMMIT", obtener_query_id(), arch_dest, tag_dest);
-        enviar_error_a_master(WORKER_FINALIZACION,"TAG no permitido");
-        return QI_ERR_COMMIT_CERRADO;
-    }
-
-    // Si origen tiene commit, marcar commit en destino (a nivel lógico)
-    bool origen_comiteado = hubo_COMMIT_no_se_puede_WRITE(arch_ori, tag_ori);
 
     int query_id_temp = obtener_query_id();
 
@@ -427,12 +417,6 @@ qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* t
     }
 
     // memoria_actualizar_tag(arch_ori, tag_ori, arch_dest, tag_dest);
-
-    // Mover commit origen -> destino
-    if (origen_comiteado) {
-        memoria_eliminar_commit(arch_ori, tag_ori);
-        memoria_agregar_commit(arch_dest, tag_dest);
-    }
 
     log_info(logger, "## Query %d: TAG exitoso", obtener_query_id());
     return QI_OK;

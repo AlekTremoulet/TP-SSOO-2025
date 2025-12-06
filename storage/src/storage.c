@@ -20,6 +20,7 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < block_count; i++) {
         inicializar_bloque_fisico(i);
     }
+    
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
 
@@ -71,6 +72,7 @@ void levantarConfigSuperblock(){
 void *server_mh_worker(void *args){ // Server Multi-hilo 
     int server = iniciar_servidor(puerto);
     protocolo_socket cod_op;
+    protocolo_socket codigo_respuesta;
     t_list *paquete_recv;
     int socket_nuevo;
     char* archivo;
@@ -78,6 +80,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
     int query_id;
     int tamanio;
     int num_bloque_Log;
+    
     parametros_worker parametros_recibidos_worker;
 
     while((socket_nuevo = esperar_cliente(server))){
@@ -93,7 +96,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             tag = list_remove(paquete_recv, 0); 
             query_id = *(int*) list_remove(paquete_recv, 0);
             Crear_file(archivo,tag,query_id);
-            enviar_paquete_ok(socket_nuevo);
             break;
         case OP_TRUNCATE:
             paquete_recv = recibir_paquete(socket_nuevo);
@@ -102,7 +104,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             tamanio = *(int *)list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             Truncar_file(archivo,tag,tamanio,query_id);
-            enviar_paquete_ok(socket_nuevo);
             break;
         case OP_WRITE:
             esperar(retardo_bloque);
@@ -113,7 +114,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             char* contenido = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             Escrbir_bloque(archivo,tag,num_bloque_Log,contenido,query_id);
-            enviar_paquete_ok(socket_nuevo);
             break;
         case OP_READ:
             esperar(retardo_bloque);
@@ -123,7 +123,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             num_bloque_Log = *(int *)list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             Leer_bloque(archivo,tag,num_bloque_Log,query_id);
-            enviar_paquete_ok(socket_nuevo);
             break;
         case OP_TAG:
             paquete_recv = recibir_paquete(socket_nuevo);
@@ -133,7 +132,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             char* tag_dest = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             Crear_tag(arch_ori,arch_dest,tag_ori,tag_dest,query_id);
-            enviar_paquete_ok(socket_nuevo);
             break;
         case OP_COMMIT:
             paquete_recv = recibir_paquete(socket_nuevo);
@@ -141,7 +139,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             tag = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             Commit_tag(archivo,tag,query_id);
-            enviar_paquete_ok(socket_nuevo);
             break;
         case OP_DELETE:
             paquete_recv = recibir_paquete(socket_nuevo);
@@ -149,7 +146,6 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             tag = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             Eliminar_tag(archivo,tag,query_id);
-            enviar_paquete_ok(socket_nuevo);
             break;
         case PARAMETROS_STORAGE:
             paquete_recv = recibir_paquete(socket_nuevo);
@@ -164,6 +160,17 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             return (void *)EXIT_FAILURE;
             break;
         }
+        if(strcmp(error_storage,"")){
+            t_paquete* paquete = crear_paquete(ERR_ESCRITURA_ARCHIVO_COMMITED);
+            agregar_a_paquete(paquete, error_storage, strlen(error_storage) + 1);
+            enviar_paquete(paquete, socket_nuevo);
+            eliminar_paquete(paquete);
+            error_storage="";
+        }
+        else{
+            enviar_paquete_ok(socket_nuevo);
+        }
+        
            
     }
     return (void *)EXIT_SUCCESS;

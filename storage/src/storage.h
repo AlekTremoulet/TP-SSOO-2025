@@ -20,7 +20,7 @@ char * path_hash;
 int tam_fs;
 int tam_bloque;
 int block_count;
-
+char* error_storage="";
 char *path_bitmap;
 
 

@@ -117,6 +117,8 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
 
     if (strcmp(estado_actual, "COMMITED") == 0){
         log_error(logger, "Error, ESCRITURA NO PERMITIDA (ARCHIVO COMITEADO)");
+        error_storage = "ERR_ESCRITURA_ARCHIVO_COMMITED";
+        free(metadata_config_asociado);
     }
     else
     {
@@ -240,6 +242,7 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
 
     if (strcmp(estado_actual, "COMMITED") == 0){
         log_error(logger, "Error, ESCRITURA NO PERMITIDA (ARCHIVO COMITEADO)");
+        error_storage = "ERR_ESCRITURA_ARCHIVO_COMMITED";
         config_destroy(config_a_escribir);
         free(metadata_config_asociado);
     }

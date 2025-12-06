@@ -73,7 +73,7 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, 
 qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag);
 
 qi_status_t memoria_flush_global();
-bool hubo_COMMIT_no_se_puede_WRITE(const char* archivo, const char* tag);
+
 
 
 #endif

@@ -30,6 +30,7 @@ extern char * dir_physical_blocks;
 extern int retardo_bloque;
 extern int retardo_operacion;
 extern char * path_hash;
+extern char* error_storage;
 //Operaciones
 
 
