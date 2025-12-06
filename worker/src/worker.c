@@ -73,7 +73,9 @@ void levantarConfig(char* archivo_config){
 
 }
 void levantarStorage(){
-    config = config_create("./worker.config");
+    char path[64];
+    snprintf(path, sizeof(path), "./%s", archivo_config);
+    config = config_create(path);
     char *value = config_get_string_value(config, "LOG_LEVEL");
     current_log_level = log_level_from_string(value);
     ip_storage = config_get_string_value(config, "IP_STORAGE");
