@@ -64,9 +64,10 @@ void *conexion_cliente_master(void *args){
 
             case QUERY_LECTURA:
                 paquete_recv = recibir_paquete(socket_master);
-                char * file_tag = list_remove(paquete_recv, 0);
+                char * file = list_remove(paquete_recv, 0);
+                char * tag = list_remove(paquete_recv, 0);
                 char * contenido = list_remove(paquete_recv, 0);
-                log_info(logger, "## Lectura realizada: File <%s>, contenido: <%s>", file_tag, contenido);
+                log_info(logger, "## Lectura realizada: File <%s:%s>, contenido: <%s>", file, tag, contenido);
                 break;
 
             default:

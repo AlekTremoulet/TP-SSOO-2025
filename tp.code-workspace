@@ -49,6 +49,12 @@
       "configurations": ["RUN_QUERY_C0NTROL", "RUN_MASTER"],
       // "preLaunchTask": "${defaultBuildTask}",
       "stopAll": false
+    },
+    {
+      "name": "WORKER + STORAGE",
+      "configurations": ["RUN_WORKER", "RUN_STORAGE"],
+      // "preLaunchTask": "${defaultBuildTask}",
+      "stopAll": false
     }
   ]
   }

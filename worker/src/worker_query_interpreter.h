@@ -13,26 +13,43 @@ typedef enum {
     QI_ERR_FUERA_LIMITE,
     QI_ERR_OP_NO_PERMITIDA, 
     QI_ERR_NO_ENCONTRADA, 
-    QI_ERR_NO_HAY_ESPACIO
+    QI_ERR_NO_HAY_ESPACIO,
+    QI_ERR_STORAGE,
+    QI_ERR_COMMIT_CERRADO
 } qi_status_t;
 
+extern int flag_desalojo;
+extern pthread_mutex_t * mutex_flag_desalojo;
 
-static t_instruccion obtener_instruccion(const char* texto);
-static inline void quitar_salto_de_linea(char* cadena);
-static void liberar_string_split(char** array);
-qi_status_t obtener_instruccion_y_args(void* parametros_worker, const char* linea, int query_id);
-static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out);
-void ejecutar_query(const char* path_query, int query_id);
-qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args, int query_id);
-qi_status_t ejecutar_CREATE(char* archivo, char* tag, int query_id);
-qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio, int query_id);
-qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido, int query_id);
-qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio, int query_id);
-qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* tag_dest, int query_id);
-qi_status_t ejecutar_COMMIT(char* archivo, char* tag, int query_id);
-qi_status_t ejecutar_FLUSH(char* archivo, char* tag, int query_id);
-qi_status_t ejecutar_DELETE(char* archivo, char* tag, int query_id);
-static qi_status_t exec_CREATE(int qid, char* cadena);
-static bool separar_nombre_y_tag(const char* cadena, char** nombre_out, char** tag_out);
+
+
+
+qi_status_t obtener_instruccion_y_args(void* parametros_worker,  char* linea);
+qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args);
+
+int obtener_desalojo_flag();
+void setear_desalojo_flag(int value);
+void loop_principal();
+
+char *obtener_instruccion_index(list_struct_t *lista_queries, int PC);
+
+int ejecutar_query(const char* path_query);
+qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args);
+qi_status_t ejecutar_CREATE(char* archivo, char* tag);
+qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int tamanio);
+qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido);
+qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio);
+qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* tag_dest);
+qi_status_t ejecutar_COMMIT(char* archivo, char* tag);
+qi_status_t ejecutar_FLUSH(char* archivo, char* tag);
+qi_status_t ejecutar_DELETE(char* archivo, char* tag);
+
+int enviar_peticion_a_storage(t_paquete *paquete);
+void loop_principal();
+
+int obtener_desalojo_flag();
+void setear_desalojo_flag(int value);
+
+int enviar_error_a_master(protocolo_socket codigo, char *error);
 
 #endif

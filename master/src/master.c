@@ -219,10 +219,7 @@ void *handler_cliente(void *arg) {
 
         case PARAMETROS_WORKER: {
             t_list *paquete_recv = recibir_paquete(socket_nuevo);
-            int *id_ptr = list_remove(paquete_recv, 0);
-            int worker_id = *id_ptr;
-
-            enviar_paquete_ok(socket_nuevo);
+            int worker_id = *(int *)list_remove(paquete_recv, 0);
 
             // FIFO - registro al worker como libre
             worker_t *w = malloc(sizeof(worker_t));
@@ -260,6 +257,25 @@ void *handler_cliente(void *arg) {
 
     // el socket queda abierto: lo necesito para hablar con el Query/Worker.
     return NULL;
+}
+
+worker_t * buscar_worker_por_id(int id, list_struct_t * cola){
+
+    pthread_mutex_lock(cola->mutex);
+
+    worker_t * aux;
+    t_list_iterator * iterator = list_iterator_create(cola->lista);
+
+    while (list_iterator_has_next(iterator)){
+        aux = list_iterator_next(iterator);
+        if (aux->id == id){
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(cola->mutex);
+
+    return aux;
 }
 
 void encolar_worker(list_struct_t *cola, worker_t *w, int index){
@@ -463,20 +479,17 @@ void *hilo_worker_query(void *arg) {
 
         switch (cod) {
 
-            case WORKER_LECTURA: {
+            case OP_READ: {
 
                 t_list* paquete = recibir_paquete(w->socket_worker);
 
-                //recibimos id de worker?
-                int id_query = *(int *)list_remove(paquete, 0);
-
-                int size = *(int *)list_remove(paquete, 0);
-
-                void *buffer = list_remove(paquete, 0);
+                char * archivo = list_remove(paquete, 0);
+                char * tag = list_remove(paquete, 0);
+                char *buffer = list_remove(paquete, 0);
 
                 log_info(logger, "## Se envía un mensaje de lectura de la Query <%d> en el Worker <%d> al Query Control", q->id_query, w->id);
 
-                query_enviar_lectura(q, buffer, size);
+                query_enviar_lectura(q, archivo, tag, buffer);
 
                 list_destroy_and_destroy_elements(paquete, free);
 
@@ -486,9 +499,7 @@ void *hilo_worker_query(void *arg) {
             case WORKER_FINALIZACION: {
 
                 t_list *paquete = recibir_paquete(w->socket_worker);
-                if (paquete != NULL) {
-                    list_destroy_and_destroy_elements(paquete, free);
-                }
+                char * motivo = list_remove(paquete, 0);
             
                 log_info(logger, "## Se terminó la Query <%d> en el Worker <%d>", q->id_query, w->id);
 
@@ -502,7 +513,7 @@ void *hilo_worker_query(void *arg) {
                 // reencolar worker como libre
                 encolar_worker(workers_libres, w, -1);
 
-                query_finalizar(q, "Fin de query");
+                query_finalizar(q, motivo);
 
                 free(q->archivo);
                 free(q);

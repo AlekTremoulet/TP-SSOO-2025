@@ -308,3 +308,35 @@ void destrabar_flag_global(int *flag, pthread_mutex_t *mutex, pthread_cond_t *co
     pthread_cond_broadcast(cond);
     pthread_mutex_unlock(mutex);
 }
+
+char* string_array_to_string(char** array) {
+    if (!array || !array[0]) {
+        return strdup("[]");
+    }
+
+    size_t len = 2; 
+    int i = 0;
+    
+    while (array[i] != NULL) {
+        len += strlen(array[i]);
+        if (array[i+1] != NULL) {
+            len += 1; 
+        }
+        i++;
+    }
+
+    char* result = calloc(len + 1, sizeof(char));
+    strcpy(result, "[");
+
+    i = 0;
+    while (array[i] != NULL) {
+        strcat(result, array[i]);
+        if (array[i+1] != NULL) {
+            strcat(result, ",");
+        }
+        i++;
+    }
+
+    strcat(result, "]");
+    return result;
+}

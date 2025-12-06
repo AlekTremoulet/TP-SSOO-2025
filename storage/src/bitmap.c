@@ -1,65 +1,9 @@
 #include "bitmap.h"
- 
-void inicializar_bitmap() {
-    size_t tamanio_bitmap = (size_t)ceil((double)block_count/8);;
-    
-    path_bitmap = cargar_ruta("bitmap.bin");
 
-
-    bitmap_file = fopen(path_bitmap, "rb+");
-    if (!bitmap_file) {
-        bitmap_file = fopen(path_bitmap, "wb+");
-        if (!bitmap_file) {
-            log_info(logger, "Error al crear el archivo bitmap.bin");
-            free(path_bitmap);
-            exit(EXIT_FAILURE);
-        }
-        uint8_t* buffer = calloc(tamanio_bitmap, sizeof(uint8_t));
-        if (!buffer) {
-            log_info(logger, "Error al asignar memoria para el buffer inicial.");
-            fclose(bitmap_file);
-            free(path_bitmap);
-            exit(EXIT_FAILURE);
-        }
-        if (fwrite(buffer, sizeof(uint8_t), tamanio_bitmap, bitmap_file) != tamanio_bitmap) {
-            log_info(logger, "Error al escribir en el archivo bitmap.bin");
-            free(buffer);
-            fclose(bitmap_file);
-            free(path_bitmap);
-            exit(EXIT_FAILURE);
-        }
-        fflush(bitmap_file);
-        free(buffer);
-    }
-
-    uint8_t* contenido_bitmap = malloc(tamanio_bitmap);
-    if (!contenido_bitmap) {
-        log_info(logger, "Error al asignar memoria para contenido_bitmap");
-        fclose(bitmap_file);
-        free(path_bitmap);
-        exit(EXIT_FAILURE);
-    }
-    rewind(bitmap_file);
-    if (fread(contenido_bitmap, sizeof(uint8_t), tamanio_bitmap, bitmap_file) != tamanio_bitmap) {
-        log_info(logger, "Error al leer el archivo bitmap.bin");
-        free(contenido_bitmap);
-        fclose(bitmap_file);
-        free(path_bitmap);
-        exit(EXIT_FAILURE);
-    }
-
-
-    bitmap = bitarray_create_with_mode((char*)contenido_bitmap, tamanio_bitmap, LSB_FIRST);
-    if (!bitmap) {
-        log_info(logger, "Error al inicializar el bitmap.");
-        free(contenido_bitmap);
-        fclose(bitmap_file);
-        free(path_bitmap);
-        exit(EXIT_FAILURE);
-    }
-    log_info(logger, "Bitmap inicializado correctamente.");
-
-}
+t_bitarray* bitmap;
+FILE* bitmap_file;
+int libres = 0;
+uint32_t bits_ocupados;
 
 int espacio_disponible(t_bitarray * bitmap) {
     for (int i = 0; i < bitarray_get_max_bit(bitmap) ; i++){
@@ -146,9 +90,9 @@ char *cargar_ruta(char *ruta_al_archivo){
     return path_creado;
 }
 
-void buscar_bit_libre(){
-    if (espacio_disponible(bitmap) !=-1){
-        ocupar_espacio_bitmap(espacio_disponible(bitmap));
+void buscar_y_ocupar_siguiente_bit_libre(int Siguiente_bit_libre){
+    if (Siguiente_bit_libre !=-1){
+        ocupar_espacio_bitmap(Siguiente_bit_libre);
     } else{
         ocupar_espacio_bitmap(libres);
         libres++;

@@ -1,18 +1,7 @@
 #ifndef OPERACIONES_H
 #define OPERACIONES_H
 
-
-#include <utils/utils.h>
-#include <commons/log.h>
-#include <commons/config.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <commons/crypto.h>
+#include <bitmap.h>
 
 
 typedef enum {
@@ -22,20 +11,40 @@ typedef enum {
     Escritura_no_Permitida,
     Fuera_Limite
 } t_errores_Fs;
+typedef struct {
+    char * nombre;
+    char * hash;
+    char * ruta_base;
+    char * ruta_tag;
+} t_archivo_creado;
 
 
+typedef enum {
+    WIP,
+    COMMITED
+} t_estado_metadata;
+
+extern char * dir_files;
+extern t_bitarray* bitmap;
+extern char * dir_physical_blocks;
+extern int retardo_bloque;
+extern int retardo_operacion;
+extern char * path_hash;
 //Operaciones
 
 
-void Crear_file(char* archivo,char* tag); 
 void Truncar_file(char* archivo, char* tag, int tamanio, int query_id); 
-void Escrbir_bloque(char* archivo, char* tag, int dir_base, char* contenido, int query_id); 
-void Leer_bloque(char* archivo, char* tag, int dir_base, int tamanio, int query_id); 
+void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id); 
+char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id); 
 void Eliminar_tag(char* archivo, char* tag, int query_id); 
-void Copiar_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino);
+void Crear_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino, int query_id);
 void Commit_tag(char* archivo, char* tag, int query_id); 
-
-
+char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo,int query_id);
+char* crear_directorio(char* path_a_crear);
+char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo);
+char *escribir_en_hash(char *nombre_bloque);
+char *retornar_hash(char *nombre_bloque);
+void esperar(int milisegundos);
 
 
 #endif
