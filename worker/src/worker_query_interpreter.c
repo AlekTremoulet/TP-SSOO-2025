@@ -349,11 +349,8 @@ log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", obtener_query_id()
         enviar_error_a_master(WORKER_FINALIZACION,"Storage rechazó TRUNCATE");
         return QI_ERR_STORAGE;
     }
-    // TRUNCATE aceptado -> actualizar memoria
     memoria_truncar(archivo, tag, nuevo_tamanio);
-
     log_info(logger,"## Query %d: TRUNCATE %s:%s exitoso",obtener_query_id(), archivo, tag);
-
     return QI_OK;
 }
 
@@ -449,7 +446,6 @@ qi_status_t ejecutar_COMMIT(char* archivo, char* tag) {
         log_info(logger, "## Query %d: COMMIT exitoso", obtener_query_id());
         return QI_OK;
     }
-
     log_error(logger, "## Query %d: Error en COMMIT", obtener_query_id());
     enviar_error_a_master(WORKER_FINALIZACION,"Error en COMMIT");
     return QI_ERR_PARSE;

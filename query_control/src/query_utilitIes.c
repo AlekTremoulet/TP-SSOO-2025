@@ -59,7 +59,7 @@ void *conexion_cliente_master(void *args){
             case QUERY_FINALIZACION:
                 paquete_recv = recibir_paquete(socket_master);
                 char * motivo = list_remove(paquete_recv, 0);
-                log_info(logger, "## Query Finalizada - <%s>", motivo);
+                log_info(logger, "## Query Finalizada - <%s> <%s>", motivo,parametros_a_enviar.archivo);
                 return NULL;
 
             case QUERY_LECTURA:

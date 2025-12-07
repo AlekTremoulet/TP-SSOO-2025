@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["P_errores"],
+      "args": ["master_plani_priori"],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

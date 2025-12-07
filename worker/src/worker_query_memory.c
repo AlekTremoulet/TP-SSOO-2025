@@ -201,10 +201,7 @@ static bool enviar_marco_a_storage(int marco) {
         log_debug(logger, "Marco %d (p.%d %s:%s) enviado a Storage y marcado limpio",marco, frame->nro_pag_logica, frame->archivo, frame->tag);
         return true;
     } 
-    else if (ERR_ESCRITURA_ARCHIVO_COMMITED){
-        log_error(logger, "ERROR El archivo ya tiene COMMIT");
-        return false;
-    }
+
     else {
         log_error(logger, "Error al enviar marco %d a Storage", marco);
         enviar_error_a_master(resp,"Error al enviar marco");
