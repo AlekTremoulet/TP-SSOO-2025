@@ -75,39 +75,33 @@ void levantarConfigSuperblock(){
     fclose(fp);
     
 }
+void *thread_worker(void * args){
+    int socket_worker = *(int*)args;
 
-
-void *server_mh_worker(void *args){ // Server Multi-hilo 
-    int server = iniciar_servidor(puerto);
     protocolo_socket cod_op;
     protocolo_socket codigo_respuesta;
     t_list *paquete_recv;
-    int socket_nuevo;
     char* archivo;
     char* tag;
     int query_id;
     int tamanio;
     int num_bloque_Log;
-    
-    parametros_worker parametros_recibidos_worker;
 
-    while((socket_nuevo = esperar_cliente(server))){
-
-        log_info(logger, "Se conecta un Worker con Id: <%d> ",parametros_recibidos_worker.id); //hay que reviisar esto
-        cod_op = recibir_operacion(socket_nuevo);
+    while(1){
+        cod_op = recibir_operacion(socket_worker);
         esperar(retardo_operacion);
         switch (cod_op)
         {
         case OP_CREATE:
-            paquete_recv = recibir_paquete(socket_nuevo);
+            paquete_recv = recibir_paquete(socket_worker);
             archivo = list_remove(paquete_recv, 0); 
             tag = list_remove(paquete_recv, 0); 
             query_id = *(int*) list_remove(paquete_recv, 0);
             Crear_file(archivo,tag,query_id);
-            enviar_paquete_ok(socket_nuevo);
+            enviar_paquete_ok(socket_worker);
             break;
         case OP_TRUNCATE:
-            paquete_recv = recibir_paquete(socket_nuevo);
+            paquete_recv = recibir_paquete(socket_worker);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
             tamanio = *(int *)list_remove(paquete_recv, 0);
@@ -116,7 +110,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             break;
         case OP_WRITE:
             esperar(retardo_bloque);
-            paquete_recv = recibir_paquete(socket_nuevo);
+            paquete_recv = recibir_paquete(socket_worker);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
             num_bloque_Log = *(int *)list_remove(paquete_recv, 0);
@@ -126,7 +120,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             break;
         case OP_READ:
             esperar(retardo_bloque);
-            paquete_recv = recibir_paquete(socket_nuevo);
+            paquete_recv = recibir_paquete(socket_worker);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
             num_bloque_Log = *(int *)list_remove(paquete_recv, 0);
@@ -134,7 +128,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             Leer_bloque(archivo,tag,num_bloque_Log,query_id);
             break;
         case OP_TAG:
-            paquete_recv = recibir_paquete(socket_nuevo);
+            paquete_recv = recibir_paquete(socket_worker);
             char* arch_ori = list_remove(paquete_recv, 0);
             char* tag_ori = list_remove(paquete_recv, 0);
             char* arch_dest = list_remove(paquete_recv, 0);
@@ -143,25 +137,25 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
             Crear_tag(arch_ori,arch_dest,tag_ori,tag_dest,query_id);
             break;
         case OP_COMMIT:
-            paquete_recv = recibir_paquete(socket_nuevo);
+            paquete_recv = recibir_paquete(socket_worker);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             Commit_tag(archivo,tag,query_id);
             break;
         case OP_DELETE:
-            paquete_recv = recibir_paquete(socket_nuevo);
+            paquete_recv = recibir_paquete(socket_worker);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             Eliminar_tag(archivo,tag,query_id);
             break;
         case PARAMETROS_STORAGE:
-            paquete_recv = recibir_paquete(socket_nuevo);
+            paquete_recv = recibir_paquete(socket_worker);
             list_destroy_and_destroy_elements(paquete_recv, free);
             t_paquete* paquete_send = crear_paquete(PARAMETROS_STORAGE);
             agregar_a_paquete(paquete_send,&tam_bloque,sizeof(int));
-            enviar_paquete(paquete_send,socket_nuevo);
+            enviar_paquete(paquete_send,socket_worker);
             eliminar_paquete(paquete_send);
             break;
         default:
@@ -172,15 +166,37 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
         if(strcmp(error_storage,"")){
             t_paquete* paquete = crear_paquete(ERR_ESCRITURA_ARCHIVO_COMMITED);
             agregar_a_paquete(paquete, error_storage, strlen(error_storage) + 1);
-            enviar_paquete(paquete, socket_nuevo);
+            enviar_paquete(paquete, socket_worker);
             eliminar_paquete(paquete);
             error_storage="";
         }
         else{
-            enviar_paquete_ok(socket_nuevo);
+            enviar_paquete_ok(socket_worker);
         }
         
            
+    }
+}
+
+void *server_mh_worker(void *args){ // Server Multi-hilo 
+    int server = iniciar_servidor(puerto);
+
+    int socket_nuevo;
+    
+    parametros_worker parametros_recibidos_worker;
+
+    while((socket_nuevo = esperar_cliente(server))){
+
+        log_info(logger, "Se conecta un Worker con Id: <%d> ",parametros_recibidos_worker.id); //hay que reviisar esto
+        
+        thread_t tid;
+
+        int socket = malloc(sizeof(int));
+        socket = *socket_nuevo;
+
+        pthread_create(&tid, NULL, thread_worker, &socket);
+
+        
     }
     return (void *)EXIT_SUCCESS;
 }
