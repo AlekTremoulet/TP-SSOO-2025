@@ -9,7 +9,7 @@ PUERTO_MASTER_DESALOJO=9005
 IP_STORAGE=127.0.0.1
 PUERTO_STORAGE=9002
 
-LOG_LEVEL=DEBUG #DEBUG INFO
+LOG_LEVEL=INFO #DEBUG INFO
 
 
 dir_query='./query_control'
@@ -132,7 +132,7 @@ LOG_LEVEL=${LOG_LEVEL}" > "${dir_storage}/P_memoria_worker.config"
 
 
 
-#P_planificacion_first.config
+#P_planificacion_FRESH.config
 echo "PUERTO_ESCUCHA=${PUERTO_STORAGE}
 FRESH_START=TRUE
 PUNTO_MONTAJE=${dir_montaje}
@@ -142,10 +142,10 @@ RETARDO_ACCESO_BLOQUE=25
 FS_SIZE=65536
 BLOCK_SIZE=16
 
-LOG_LEVEL=${LOG_LEVEL}" > "${dir_storage}/P_planificacion_first.config"
+LOG_LEVEL=${LOG_LEVEL}" > "${dir_storage}/P_planificacion_FRESH.config"
 
 
-#P_planificacion_second.config
+#P_planificacion_NO_FRESH.config
 echo "PUERTO_ESCUCHA=${PUERTO_STORAGE}
 FRESH_START=FALSE
 PUNTO_MONTAJE=${dir_montaje}
@@ -155,7 +155,7 @@ RETARDO_ACCESO_BLOQUE=25
 FS_SIZE=65536
 BLOCK_SIZE=16
 
-LOG_LEVEL=${LOG_LEVEL}" > "${dir_storage}/P_planificacion_second.config"
+LOG_LEVEL=${LOG_LEVEL}" > "${dir_storage}/P_planificacion_NO_FRESH.config"
 
 
 #P_storage.config
