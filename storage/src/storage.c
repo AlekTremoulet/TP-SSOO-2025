@@ -106,7 +106,6 @@ void *thread_worker(void * args){
             tag = list_remove(paquete_recv, 0); 
             query_id = *(int*) list_remove(paquete_recv, 0);
             Crear_file(archivo,tag,query_id, error_devolucion);
-            enviar_paquete_ok(socket_worker);
             break;
         case OP_TRUNCATE:
             paquete_recv = recibir_paquete(socket_worker);
@@ -178,7 +177,7 @@ void *thread_worker(void * args){
             agregar_a_paquete(paquete, error_devolucion, sizeof(protocolo_socket));
             enviar_paquete(paquete, socket_worker);
             eliminar_paquete(paquete);
-            error_devolucion="";
+            error_devolucion=OK;
         }
         else{
             enviar_paquete_ok(socket_worker);
