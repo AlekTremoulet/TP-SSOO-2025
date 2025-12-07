@@ -21,8 +21,6 @@ dir_montaje='../../storage'
 dir_queries='../queries'
 
 
-if 
-
 echo "IP_MASTER=${IP_MASTER}"
 echo "PUERTO_MASTER=${PUERTO_MASTER}"
 echo "PUERTO_MASTER_DESALOJO=${PUERTO_MASTER_DESALOJO}"
