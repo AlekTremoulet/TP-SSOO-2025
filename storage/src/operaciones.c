@@ -113,7 +113,6 @@ void Crear_file(char* archivo,char* tag, int query_id){
     } else {
         log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag);
     }
-    
 }; 
 
 void Truncar_file(char* archivo, char* tag, int tamanio, int query_id) 

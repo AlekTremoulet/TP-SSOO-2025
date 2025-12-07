@@ -87,8 +87,13 @@ void *thread_worker(void * args){
     int tamanio;
     int num_bloque_Log;
 
+    int worker_id;
+
     while(1){
         cod_op = recibir_operacion(socket_worker);
+        if (cod_op == -1){
+            log_error(logger, "Desconexion de worker id: %d", worker_id);
+        }
         esperar(retardo_operacion);
         switch (cod_op)
         {
@@ -152,6 +157,8 @@ void *thread_worker(void * args){
             break;
         case PARAMETROS_STORAGE:
             paquete_recv = recibir_paquete(socket_worker);
+            worker_id = *(int *)list_remove(paquete_recv, 0);
+            log_info(logger, "Se conecta un Worker con Id: <%d> ",worker_id); //hay que reviisar esto
             list_destroy_and_destroy_elements(paquete_recv, free);
             t_paquete* paquete_send = crear_paquete(PARAMETROS_STORAGE);
             agregar_a_paquete(paquete_send,&tam_bloque,sizeof(int));
@@ -183,11 +190,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
 
     int socket_nuevo;
     
-    parametros_worker parametros_recibidos_worker;
-
     while((socket_nuevo = esperar_cliente(server))){
-
-        log_info(logger, "Se conecta un Worker con Id: <%d> ",parametros_recibidos_worker.id); //hay que reviisar esto
         
         thread_t tid;
 
