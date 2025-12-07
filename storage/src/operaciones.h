@@ -33,13 +33,13 @@ extern char * path_hash;
 extern char* error_storage;
 //Operaciones
 
-void Crear_file(char* archivo,char* tag, int query_id);
-void Truncar_file(char* archivo, char* tag, int tamanio, int query_id); 
-void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id); 
-char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id); 
-void Eliminar_tag(char* archivo, char* tag, int query_id); 
-void Crear_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino, int query_id);
-void Commit_tag(char* archivo, char* tag, int query_id); 
+void Crear_file(char* archivo,char* tag, int query_id, protocolo_socket * error);
+void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo_socket * error); 
+void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id, protocolo_socket * error); 
+char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, protocolo_socket * error); 
+void Eliminar_tag(char* archivo, char* tag, int query_id, protocolo_socket * error); 
+void Crear_tag(char * Origen,char * Destino,char* tag_origen,char* tag_destino, int query_id, protocolo_socket * error);
+void Commit_tag(char* archivo, char* tag, int query_id, protocolo_socket * error); 
 char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo);
 char* crear_directorio(char* path_a_crear);
 char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo);

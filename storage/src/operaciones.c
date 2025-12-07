@@ -106,16 +106,17 @@ char* crear_directorio(char* path_a_crear) {
 }
 
 
-void Crear_file(char* archivo,char* tag, int query_id){
+void Crear_file(char* archivo,char* tag, int query_id, protocolo_socket * error){
     char * crear_archivo_status = crear_archivo_en_FS(archivo, tag);
     if (strcmp(crear_archivo_status,"Error_create")){
         log_info(logger,"Error al crear el archivo");
+        *error = ERR_FILE_EXISTENTE;
     } else {
         log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag);
     }
 }; 
 
-void Truncar_file(char* archivo, char* tag, int tamanio, int query_id) 
+void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo_socket * error) 
 {
     tamanio /= tam_bloque;
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
@@ -128,7 +129,6 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
 
     if (strcmp(estado_actual, "COMMITED") == 0){
         log_error(logger, "Error, ESCRITURA NO PERMITIDA (ARCHIVO COMITEADO)");
-        error_storage = "ERR_ESCRITURA_ARCHIVO_COMMITED";
         free(metadata_config_asociado);
     }
     else
@@ -237,7 +237,7 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id)
     }
 }
 
-void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id){
+void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id, protocolo_socket * error){
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
     sprintf(metadata_config_asociado, "%s/%s/%s/metadata.config", dir_files, archivo, tag);
 
@@ -452,7 +452,7 @@ char* retornar_hash(char *nombre_bloque) {
 
 
 
-char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id){
+char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, protocolo_socket * error){
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
     sprintf(metadata_config_asociado, "%s/%s/%s/metadata.config", dir_files, archivo, tag);
 
@@ -512,7 +512,7 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id){
     return buffer_contenido;
 }
 
-void Crear_tag(char * Origen, char * Destino, char* tag_origen, char* tag_destino, int query_id) {
+void Crear_tag(char * Origen, char * Destino, char* tag_origen, char* tag_destino, int query_id, protocolo_socket * error) {
     char* ruta_origen = malloc(strlen(dir_files) + strlen(Origen) + strlen(tag_origen) + 3);
     sprintf(ruta_origen, "%s/%s/%s", dir_files, Origen, tag_origen);
 
@@ -546,7 +546,7 @@ void Crear_tag(char * Origen, char * Destino, char* tag_origen, char* tag_destin
     log_info(logger,"<%d> - Tag Creado <%s>:<%s>", query_id, Destino, tag_destino);
 };
 
-void Eliminar_tag(char * Origen, char* tag, int query_id){
+void Eliminar_tag(char * Origen, char* tag, int query_id, protocolo_socket * error){
 
     if (strcmp(Origen, "initial_file") == 0 && strcmp(tag, "BASE") == 0) {
         log_error(logger, "Error: NO SE PUEDE ELIMINAR EL TAG initial_file/BASE");
@@ -570,7 +570,7 @@ void Eliminar_tag(char * Origen, char* tag, int query_id){
     }
 }
 
-void Commit_tag(char* archivo, char* tag, int query_id) {
+void Commit_tag(char* archivo, char* tag, int query_id, protocolo_socket * error) {
     char* ruta_metadata = string_from_format("%s/%s/%s/metadata.config", dir_files, archivo, tag);
     t_config *config_archivo = config_create(ruta_metadata);
 

@@ -87,6 +87,9 @@ void *thread_worker(void * args){
     int tamanio;
     int num_bloque_Log;
 
+    protocolo_socket * error_devolucion = malloc(sizeof(protocolo_socket));
+    * error_devolucion = OK;
+
     int worker_id;
 
     while(1){
@@ -102,7 +105,7 @@ void *thread_worker(void * args){
             archivo = list_remove(paquete_recv, 0); 
             tag = list_remove(paquete_recv, 0); 
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Crear_file(archivo,tag,query_id);
+            Crear_file(archivo,tag,query_id, error_devolucion);
             enviar_paquete_ok(socket_worker);
             break;
         case OP_TRUNCATE:
@@ -111,7 +114,7 @@ void *thread_worker(void * args){
             tag = list_remove(paquete_recv, 0);
             tamanio = *(int *)list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Truncar_file(archivo,tag,tamanio,query_id);
+            Truncar_file(archivo,tag,tamanio,query_id, error_devolucion);
             break;
         case OP_WRITE:
             esperar(retardo_bloque);
@@ -121,7 +124,7 @@ void *thread_worker(void * args){
             num_bloque_Log = *(int *)list_remove(paquete_recv, 0);
             char* contenido = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Escrbir_bloque(archivo,tag,num_bloque_Log,contenido,query_id);
+            Escrbir_bloque(archivo,tag,num_bloque_Log,contenido,query_id, error_devolucion);
             break;
         case OP_READ:
             esperar(retardo_bloque);
@@ -130,7 +133,7 @@ void *thread_worker(void * args){
             tag = list_remove(paquete_recv, 0);
             num_bloque_Log = *(int *)list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Leer_bloque(archivo,tag,num_bloque_Log,query_id);
+            Leer_bloque(archivo,tag,num_bloque_Log,query_id, error_devolucion);
             break;
         case OP_TAG:
             paquete_recv = recibir_paquete(socket_worker);
@@ -139,21 +142,21 @@ void *thread_worker(void * args){
             char* arch_dest = list_remove(paquete_recv, 0);
             char* tag_dest = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Crear_tag(arch_ori,arch_dest,tag_ori,tag_dest,query_id);
+            Crear_tag(arch_ori,arch_dest,tag_ori,tag_dest,query_id, error_devolucion);
             break;
         case OP_COMMIT:
             paquete_recv = recibir_paquete(socket_worker);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Commit_tag(archivo,tag,query_id);
+            Commit_tag(archivo,tag,query_id, error_devolucion);
             break;
         case OP_DELETE:
             paquete_recv = recibir_paquete(socket_worker);
             archivo = list_remove(paquete_recv, 0);
             tag = list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Eliminar_tag(archivo,tag,query_id);
+            Eliminar_tag(archivo,tag,query_id, error_devolucion);
             break;
         case PARAMETROS_STORAGE:
             paquete_recv = recibir_paquete(socket_worker);
@@ -170,12 +173,12 @@ void *thread_worker(void * args){
             return (void *)EXIT_FAILURE;
             break;
         }
-        if(strcmp(error_storage,"")){
-            t_paquete* paquete = crear_paquete(ERR_ESCRITURA_ARCHIVO_COMMITED);
-            agregar_a_paquete(paquete, error_storage, strlen(error_storage) + 1);
+        if(error_devolucion != OK){
+            t_paquete* paquete = crear_paquete(error_devolucion);
+            agregar_a_paquete(paquete, error_devolucion, sizeof(protocolo_socket));
             enviar_paquete(paquete, socket_worker);
             eliminar_paquete(paquete);
-            error_storage="";
+            error_devolucion="";
         }
         else{
             enviar_paquete_ok(socket_worker);
@@ -188,16 +191,16 @@ void *thread_worker(void * args){
 void *server_mh_worker(void *args){ // Server Multi-hilo 
     int server = iniciar_servidor(puerto);
 
-    int socket_nuevo;
+    int *socket_nuevo = malloc(sizeof(int));
     
-    while((socket_nuevo = esperar_cliente(server))){
+    while((*socket_nuevo = esperar_cliente(server))){
         
-        thread_t tid;
+        pthread_t tid;
 
-        int socket = malloc(sizeof(int));
-        socket = *socket_nuevo;
+        int *socket = malloc(sizeof(int));
+        *socket = *socket_nuevo;
 
-        pthread_create(&tid, NULL, thread_worker, &socket);
+        pthread_create(&tid, NULL, thread_worker, socket);
 
         
     }
