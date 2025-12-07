@@ -344,12 +344,11 @@ char* string_array_to_string(char** array) {
 
 char * error_storage_string(protocolo_socket  error){
     switch (error){
-    case ERR_ESCRITURA_ARCHIVO_COMMITED: return ""; break;
-    case ERR_FILE_EXISTENTE: return "Arhivo existente"; break;
-    case ERR_LECTURA_FUERA_DEL_LIMITE: return "Lectura fuera del limite";break;
-    case ERR_TAG_EXISTENTE: return "Tag existente"; break;
+        case ERR_ESCRITURA_ARCHIVO_COMMITED: return "Error, el archivo esta commiteado"; break;
+        case ERR_FILE_EXISTENTE: return "Error, arhivo existente"; break;
+        case ERR_LECTURA_FUERA_DEL_LIMITE: return "Error, lectura fuera del limite";break;
+        case ERR_TAG_EXISTENTE: return "Error, tag existente"; break;
 
-    default: return "Error desconocido"; break;
-    
+        default: return "Error desconocido"; break;
     }
 }
