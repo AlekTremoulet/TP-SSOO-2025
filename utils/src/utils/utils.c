@@ -345,9 +345,15 @@ char* string_array_to_string(char** array) {
 char * error_storage_string(protocolo_socket  error){
     switch (error){
         case ERR_ESCRITURA_ARCHIVO_COMMITED: return "Error, el archivo esta commiteado"; break;
-        case ERR_FILE_EXISTENTE: return "Error, arhivo existente"; break;
+        case ERR_FILE_PREEXISTENTE: return "Error, arhivo existente"; break;
         case ERR_LECTURA_FUERA_DEL_LIMITE: return "Error, lectura fuera del limite";break;
-        case ERR_TAG_EXISTENTE: return "Error, tag existente"; break;
+        case ERR_TAG_PREEXISTENTE: return "Error, tag existente"; break;
+        case ERR_FILE_INEXISTENTE: return "Error, file inexistente"; break;
+        case ERR_TAG_INEXISTENTE: return "Error, tag inexistente"; break;
+        case ERR_ESPACIO_INSUFICIENTE: return "Error, espacio insuficiente"; break;
+        case ERR_METADATA: return "Error leyendo metadata"; break;
+        case ERR_ESCRITURA_BLOQUE: return "Error en escritura de bloque"; break;
+        case ERR_FORBIDDEN: return "Error, operacion no permitida"; break;
 
         default: return "Error desconocido"; break;
     }

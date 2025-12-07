@@ -173,7 +173,7 @@ void *thread_worker(void * args){
             break;
         }
         if(error_devolucion != OK){
-            t_paquete* paquete = crear_paquete(error_devolucion);
+            t_paquete* paquete = crear_paquete(*error_devolucion);
             agregar_a_paquete(paquete, error_devolucion, sizeof(protocolo_socket));
             enviar_paquete(paquete, socket_worker);
             eliminar_paquete(paquete);

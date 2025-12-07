@@ -109,8 +109,8 @@ char* crear_directorio(char* path_a_crear) {
 void Crear_file(char* archivo,char* tag, int query_id, protocolo_socket * error){
     char * crear_archivo_status = crear_archivo_en_FS(archivo, tag);
     if (strcmp(crear_archivo_status,"Error_create")){
-        log_info(logger,"Error al crear el archivo");
-        *error = ERR_FILE_EXISTENTE;
+        log_error(logger,"Error al crear el archivo");
+        *error = ERR_FILE_PREEXISTENTE;
     } else {
         log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag);
     }
@@ -129,6 +129,7 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo
 
     if (strcmp(estado_actual, "COMMITED") == 0){
         log_error(logger, "Error, ESCRITURA NO PERMITIDA (ARCHIVO COMITEADO)");
+        *error = ERR_ESCRITURA_ARCHIVO_COMMITED;
         free(metadata_config_asociado);
     }
     else
@@ -245,6 +246,7 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
     
     if (config_a_escribir == NULL) {
         log_error(logger, "Error: No se pudo abrir la metadata en %s", metadata_config_asociado);
+        *error = ERR_METADATA;
         free(metadata_config_asociado);
         return;
     }
@@ -253,7 +255,7 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
 
     if (strcmp(estado_actual, "COMMITED") == 0){
         log_error(logger, "Error, ESCRITURA NO PERMITIDA (ARCHIVO COMITEADO)");
-        error_storage = "ERR_ESCRITURA_ARCHIVO_COMMITED";
+        *error = ERR_ESCRITURA_ARCHIVO_COMMITED;
         config_destroy(config_a_escribir);
         free(metadata_config_asociado);
     }
@@ -269,7 +271,7 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
 
         if (num_bloque_Log >= cantidad_bloques) {
             log_error(logger, "<%d> - Error: Intento de escritura fuera del tamaño del archivo (Truncate insuficiente). Indice solicitado: %d, Bloques disponibles: %d", query_id, num_bloque_Log, cantidad_bloques);
-            
+            *error = ERR_LECTURA_FUERA_DEL_LIMITE;
             string_iterate_lines(bloques_actuales, (void*) free);
             free(bloques_actuales);
             config_destroy(config_a_escribir);
@@ -292,6 +294,7 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
                 
                 if (nuevo_bloque_libre == -1) {
                     log_error(logger, "Error, Espacio Insuficiente para Copy-On-Write");
+                    *error = ERR_ESPACIO_INSUFICIENTE;
                 } 
                 else {
                     buscar_y_ocupar_siguiente_bit_libre(nuevo_bloque_libre);
@@ -349,6 +352,7 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
             }
         } else {
              log_error(logger, "Error: No se encontró el archivo físico %s", path_bloque_fisico);
+             *error = ERR_FILE_INEXISTENTE;
         }
 
         log_info(logger,"<%d> - Bloque Lógico Escrito <%s>:<%s> - Número de Bloque Físico: <%d>", query_id, archivo, tag, bloque_final_escrito);
@@ -460,6 +464,7 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, pr
 
     if (config_a_leer == NULL) {
         log_error(logger, "Error: No se pudo abrir la metadata en %s", metadata_config_asociado);
+        *error = ERR_METADATA;
         free(metadata_config_asociado);
         return NULL;
     }
@@ -473,6 +478,7 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, pr
 
     if (num_bloque_Log >= cantidad_bloques) {
         log_error(logger, "<%d> - Error: Intento de lectura fuera de rango. Indice: %d, Bloques disponibles: %d", query_id, num_bloque_Log, cantidad_bloques);
+        *error = ERR_LECTURA_FUERA_DEL_LIMITE;
         string_iterate_lines(bloques_actuales, (void*) free);
         free(bloques_actuales);
         config_destroy(config_a_leer);
@@ -502,6 +508,7 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, pr
         log_debug(logger,"Data: leida <%s>", buffer_contenido);
     } else {
         log_error(logger, "Error: No se pudo abrir el archivo físico %s", path_bloque_fisico);
+        *error = ERR_ESCRITURA_BLOQUE;
     }
 
     string_iterate_lines(bloques_actuales, (void*) free);
@@ -535,6 +542,7 @@ void Crear_tag(char * Origen, char * Destino, char* tag_origen, char* tag_destin
 
     if (config_archivo == NULL) {
         log_error(logger, "No se pudo abrir el config");
+        *error = ERR_METADATA;
         free(ruta_archivo);
         return;
     }
@@ -550,6 +558,7 @@ void Eliminar_tag(char * Origen, char* tag, int query_id, protocolo_socket * err
 
     if (strcmp(Origen, "initial_file") == 0 && strcmp(tag, "BASE") == 0) {
         log_error(logger, "Error: NO SE PUEDE ELIMINAR EL TAG initial_file/BASE");
+        *error = ERR_FORBIDDEN;
     } else {
         int length = strlen(dir_files) + strlen(Origen) + strlen(tag) + 15;
         char * comando = malloc(length);
@@ -564,6 +573,7 @@ void Eliminar_tag(char * Origen, char* tag, int query_id, protocolo_socket * err
             log_info(logger,"<%d> - Tag Eliminado <%s>:<%s>", query_id, Origen, tag);
         } else {
             log_error(logger, "Error al eliminar el tag");
+            *error = ERR_TAG_INEXISTENTE;
         }
 
         free(comando);
@@ -576,6 +586,7 @@ void Commit_tag(char* archivo, char* tag, int query_id, protocolo_socket * error
 
     if (config_archivo == NULL) {
         log_error(logger, "No se pudo abrir el config en: %s", ruta_metadata);
+        *error = ERR_METADATA;
         free(ruta_metadata);
         return;
     }
