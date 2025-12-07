@@ -93,7 +93,7 @@ void *server_mh_worker(void *args){ // Server Multi-hilo
 
     while((socket_nuevo = esperar_cliente(server))){
 
-        log_info(logger, "Se conecta un Worker con Id: <%d> ",parametros_recibidos_worker.id);
+        log_info(logger, "Se conecta un Worker con Id: <%d> ",parametros_recibidos_worker.id); //hay que reviisar esto
         cod_op = recibir_operacion(socket_nuevo);
         esperar(retardo_operacion);
         switch (cod_op)
