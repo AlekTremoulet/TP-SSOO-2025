@@ -340,3 +340,16 @@ char* string_array_to_string(char** array) {
     strcat(result, "]");
     return result;
 }
+
+
+char * error_storage_string(protocolo_socket  error){
+    switch (error){
+    case ERR_ESCRITURA_ARCHIVO_COMMITED: return ""; break;
+    case ERR_FILE_EXISTENTE: return "Arhivo existente"; break;
+    case ERR_LECTURA_FUERA_DEL_LIMITE: return "Lectura fuera del limite";break;
+    case ERR_TAG_EXISTENTE: return "Tag existente"; break;
+
+    default: return "Error desconocido"; break;
+    
+    }
+}

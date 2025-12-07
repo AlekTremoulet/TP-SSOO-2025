@@ -185,4 +185,5 @@ extern t_log* logger;
     void destrabar_flag_global(int *flag, pthread_mutex_t *mutex, pthread_cond_t *cond);
     void esperar_flag_global(int *flag, pthread_mutex_t *mutex, pthread_cond_t *cond);
     char* string_array_to_string(char** array);
+    char * error_storage_string(protocolo_socket  error);
 #endif
