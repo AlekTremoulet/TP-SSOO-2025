@@ -6,6 +6,13 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
     archivo.ruta_base= malloc(strlen(dir_files) + strlen("/") + strlen(nombre_archivo)+ 1); //NO SE DONDE IRIA UN FREE
     sprintf(archivo.ruta_base, "%s/%s", dir_files,nombre_archivo);
 
+    DIR* dir = opendir(archivo.ruta_base);
+    if (dir) {
+        closedir(dir);
+        return "Error_create";
+    }
+    
+    closedir(dir);
     archivo.ruta_tag= malloc(strlen(archivo.ruta_base) + strlen("/") + strlen(tag_archivo)+ 1); //NO SE DONDE IRIA UN FREE
     sprintf(archivo.ruta_tag, "%s/%s", archivo.ruta_base,tag_archivo);
 
@@ -20,12 +27,7 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
     char *directorio_config_asociada = cargar_archivo("",config_asociada);
     log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
 
-    // DIR* dir = opendir(archivo.ruta_base);
-    // if (dir) {
-    //     closedir(dir);
-    //     return "Error_create";
-    // }
-    // closedir(dir);
+
 
     char *Estado = "WORK IN PROGRESS";
     char *Blocks = "[]";
@@ -520,19 +522,22 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, pr
 }
 
 void Crear_tag(char * Origen, char * Destino, char* tag_origen, char* tag_destino, int query_id, protocolo_socket * error) {
-    // deteccion de error:
-    // Origen tiene que ser igual a destino
-    // Origen tiene que existir
-    // tag_origen tiene que ser distinto de tag_destino
-    // tag_destino no tiene que existir
-
-    // si se cumple cualquiera -> tirar error de storage: motivo: lo que haya pasado arriba
 
     char* ruta_origen = malloc(strlen(dir_files) + strlen(Origen) + strlen(tag_origen) + 3);
     sprintf(ruta_origen, "%s/%s/%s", dir_files, Origen, tag_origen);
 
     char* ruta_destino = malloc(strlen(dir_files) + strlen(Destino) + strlen(tag_destino) + 3);
     sprintf(ruta_destino, "%s/%s/%s", dir_files, Destino, tag_destino);
+
+    DIR* dir = opendir(ruta_destino);
+    if (dir) {
+        closedir(dir);
+        log_error(logger, "Error, Tag preexistente");
+        *error = ERR_TAG_PREEXISTENTE;
+        free(ruta_origen);
+        free(ruta_destino);
+        return;
+    }
 
     char* comando = malloc(strlen("cp -r ") + strlen(ruta_origen) + strlen(" ") + strlen(ruta_destino) + 1);
     sprintf(comando, "cp -r %s %s", ruta_origen, ruta_destino);
