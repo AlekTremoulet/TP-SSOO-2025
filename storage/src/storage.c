@@ -88,7 +88,7 @@ void *thread_worker(void * args){
     int num_bloque_Log;
 
     protocolo_socket * error_devolucion = malloc(sizeof(protocolo_socket));
-    * error_devolucion = OK;
+    *error_devolucion = OK;
 
     int worker_id;
 
@@ -168,18 +168,19 @@ void *thread_worker(void * args){
             eliminar_paquete(paquete_send);
             break;
         default:
-            log_error(logger, "Se recibio un protocolo inesperado de WORKER");
+            log_error(logger, "Se recibio un protocolo inesperado de WORKER: %d", cod_op);
             return (void *)EXIT_FAILURE;
             break;
         }
-        if(error_devolucion != OK){
+        if(*error_devolucion != OK){
             t_paquete* paquete = crear_paquete(*error_devolucion);
-            agregar_a_paquete(paquete, error_devolucion, sizeof(protocolo_socket));
+            char * motivo = error_storage_string(error_devolucion);
+            agregar_a_paquete(paquete, motivo, strlen(motivo)+1);
             enviar_paquete(paquete, socket_worker);
             eliminar_paquete(paquete);
-            error_devolucion=OK;
+            *error_devolucion=OK;
         }
-        else{
+        else if (cod_op!=PARAMETROS_STORAGE){
             enviar_paquete_ok(socket_worker);
         }
         
@@ -285,7 +286,6 @@ void inicializar_bloques_logicos(){
     ocupar_espacio_bitmap(0);
     char *nombre_archivo = malloc(20);
     sprintf(nombre_archivo, "/block%04d", 0);
-    escribir_en_hash(nombre_archivo);
     link(dir_phisical_base,dir_logical_base); //ESTO ESTA MAL >:( (Hardcodeado)
     
 }

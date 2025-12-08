@@ -8,6 +8,8 @@ sem_t * sem_desalojo_waiter;
 list_struct_t * lista_queries;
 pthread_mutex_t * mutex_query_id;
 
+int socket_storage;
+
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina);
 
@@ -19,7 +21,7 @@ int main(int argc, char* argv[]) {
     }
     
     archivo_config = argv[1];
-    parametros_a_enviar.id = atoi(argv[2]);
+    id_worker = atoi(argv[2]);
 
     levantarStorage();
     levantarConfig(archivo_config);
@@ -53,8 +55,12 @@ void inicializarWorker(){
 }
 
 void levantarConfig(char* archivo_config){
-    char path[64];
-    snprintf(path, sizeof(path), "./%s", archivo_config);
+    char * path = malloc (strlen(archivo_config)+strlen(".config")+strlen("./")+1);
+    
+    strcpy(path, "./");
+    strcat(path, archivo_config);
+    strcat(path, ".config");
+
     config = config_create(path);
     char *value = config_get_string_value(config, "LOG_LEVEL");
     current_log_level = log_level_from_string(value);
@@ -73,8 +79,11 @@ void levantarConfig(char* archivo_config){
 
 }
 void levantarStorage(){
-    char path[64];
-    snprintf(path, sizeof(path), "./%s", archivo_config);
+    char * path = malloc (strlen(archivo_config)+strlen(".config")+strlen("./")+1);
+    
+    strcpy(path, "./");
+    strcat(path, archivo_config);
+    strcat(path, ".config");
     config = config_create(path);
     char *value = config_get_string_value(config, "LOG_LEVEL");
     current_log_level = log_level_from_string(value);
@@ -111,10 +120,10 @@ void *conexion_cliente_master(void *args){
 	}while(socket_master == -1);
 
     log_info(logger, "Conexión al Master exitosa. IP: <%s>, Puerto: <%s>",ip_master, puerto_master);
-    log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", parametros_a_enviar.id);
+    log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", id_worker);
 
     t_paquete *paquete_send = crear_paquete(PARAMETROS_WORKER);
-    agregar_a_paquete(paquete_send, &(parametros_a_enviar.id), sizeof(int));
+    agregar_a_paquete(paquete_send, &(id_worker), sizeof(int));
     enviar_paquete(paquete_send, socket_master);
 
     while(1){
@@ -203,7 +212,7 @@ void *conexion_cliente_master(void *args){
 }
 
 void *conexion_cliente_storage (void *args){
-	int socket_storage;
+	socket_storage;
     
     do
 	{
@@ -214,7 +223,7 @@ void *conexion_cliente_storage (void *args){
 	}while(socket_storage == -1);
 
     log_info(logger, "Conexión al Storage exitoso. IP: <%s>, Puerto: <%s>",ip_storage, puerto_storage);
-    log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", parametros_a_enviar.id);
+    log_info(logger, "Solicitud de ejecución de Worker ID:  <%d>", id_worker);
 
     parametros_storage(socket_storage);
     
@@ -224,14 +233,14 @@ void *conexion_cliente_storage (void *args){
 
 void parametros_storage(int socket_storage){
     t_paquete *paquete_send = crear_paquete(PARAMETROS_STORAGE);
-    agregar_a_paquete(paquete_send, "xd", strlen("xd"));
+    agregar_a_paquete(paquete_send, &id_worker, sizeof(int));
     enviar_paquete(paquete_send, socket_storage);
     eliminar_paquete(paquete_send);
 
     protocolo_socket cod_op = recibir_operacion(socket_storage);
     if (cod_op == PARAMETROS_STORAGE){
         t_list *paquete_recv = recibir_paquete(socket_storage);
-        tam_pagina =  *(int*) list_remove(paquete_recv, 0); 
+        tam_pagina =  *(int*) list_remove(paquete_recv, 0);
         log_debug(logger, "Parametros Storage:  <%d>",tam_pagina);
 
         inicializar_memoria_interna(Tam_memoria,tam_pagina);

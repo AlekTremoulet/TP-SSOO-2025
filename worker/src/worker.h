@@ -6,7 +6,7 @@
 t_log *logger;
 t_config *config;
 t_log_level current_log_level;
-parametros_worker parametros_a_enviar;
+int id_worker;
 
 char* archivo_config;
 int prioridad;

@@ -108,7 +108,7 @@ char* crear_directorio(char* path_a_crear) {
 
 void Crear_file(char* archivo,char* tag, int query_id, protocolo_socket * error){
     char * crear_archivo_status = crear_archivo_en_FS(archivo, tag);
-    if (strcmp(crear_archivo_status,"Error_create")){
+    if (!strcmp(crear_archivo_status,"Error_create")){
         log_error(logger,"Error al crear el archivo");
         *error = ERR_FILE_PREEXISTENTE;
     } else {

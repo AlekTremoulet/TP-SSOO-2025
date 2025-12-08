@@ -8,6 +8,7 @@ extern sem_t * sem_desalojo_waiter;
 
 extern char * ip_storage, *puerto_storage;
 extern int socket_master;
+extern int socket_storage;
 
 
 qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido);
@@ -309,19 +310,22 @@ qi_status_t ejecutar_CREATE(char* archivo, char* tag) {
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &query_id_temp, sizeof(int));
 
-    int socket_storage = enviar_peticion_a_storage(paquete);
+    enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
     log_info(logger, "## Query %d: Enviado CREATE -> Storage (%s:%s)", obtener_query_id(), archivo, tag);
 
-    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
-    close(socket_storage);
+    protocolo_socket respuesta = recibir_operacion(socket_storage);
     if (respuesta == OK) {
         log_info(logger, "## Query %d: CREATE exitoso", obtener_query_id());
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        list_destroy_and_destroy_elements(paquete_recv, free);
         return QI_OK;
     } else {
         log_error(logger, "## Query %d: Error en CREATE", obtener_query_id());
-        enviar_error_a_master(WORKER_FINALIZACION,"Error en CREATE");
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        char * motivo = list_remove(paquete_recv, 0);
+        enviar_error_a_master(WORKER_FINALIZACION,motivo);
         return QI_ERR_STORAGE;
     }
 }
@@ -339,19 +343,23 @@ log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", obtener_query_id()
     agregar_a_paquete(paquete, &nuevo_tamanio, sizeof(int));
     agregar_a_paquete(paquete, &query_id_temp, sizeof(int));
 
-    int socket_storage = enviar_peticion_a_storage(paquete);
+    enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
-    protocolo_socket resp = recibir_paquete_ok(socket_storage);
-    close(socket_storage);
-    if (resp != OK) {
-        log_error(logger,"## Query %d: Storage rechazó TRUNCATE %s:%s",obtener_query_id(), archivo, tag);
-        enviar_error_a_master(WORKER_FINALIZACION,"Storage rechazó TRUNCATE");
+    protocolo_socket resp = recibir_operacion(socket_storage);
+    if (resp == OK) {
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        list_destroy_and_destroy_elements(paquete_recv, free);
+        memoria_truncar(archivo, tag, nuevo_tamanio);
+        log_info(logger,"## Query %d: TRUNCATE %s:%s exitoso",obtener_query_id(), archivo, tag);
+        return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Storage rechazó TRUNCATE", obtener_query_id());
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        char * motivo = list_remove(paquete_recv, 0);
+        enviar_error_a_master(WORKER_FINALIZACION,motivo);
         return QI_ERR_STORAGE;
     }
-    memoria_truncar(archivo, tag, nuevo_tamanio);
-    log_info(logger,"## Query %d: TRUNCATE %s:%s exitoso",obtener_query_id(), archivo, tag);
-    return QI_OK;
 }
 
 qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* contenido)
@@ -365,10 +373,8 @@ qi_status_t ejecutar_WRITE(char* archivo, char* tag, int dir_base, char* conteni
         log_info(logger, "## Query %d: WRITE exitoso en memoria interna", obtener_query_id());
     } else {
         log_error(logger, "## Query %d: Error en WRITE (memoria interna)", obtener_query_id());
-        enviar_error_a_master(WORKER_FINALIZACION,"Error en WRITE ");
         return QI_ERR_PARSE;
     }
-
     return status;
 }
 
@@ -383,7 +389,6 @@ qi_status_t ejecutar_READ(char* archivo, char* tag, int dir_base, int tamanio)
         log_info(logger, "## Query %d: READ exitoso", obtener_query_id());
     } else {
         log_error(logger, "## Query %d: Error en READ (memoria interna)", obtener_query_id());
-        enviar_error_a_master(WORKER_FINALIZACION,"Error en READ");
         return QI_ERR_PARSE;
     }
 
@@ -401,22 +406,22 @@ qi_status_t ejecutar_TAG(char* arch_ori, char* tag_ori, char* arch_dest, char* t
     agregar_a_paquete(paquete, tag_dest,  strlen(tag_dest)+1);
     agregar_a_paquete(paquete, &query_id_temp, sizeof(int));
 
-    int socket_storage = enviar_peticion_a_storage(paquete);
+    enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
-    protocolo_socket r = recibir_paquete_ok(socket_storage);
-    close(socket_storage);
-
-    if (r != OK) {
+    protocolo_socket resp = recibir_operacion(socket_storage);
+    if (resp == OK) {
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        list_destroy_and_destroy_elements(paquete_recv, free);
+        log_info(logger, "## Query %d: TAG exitoso", obtener_query_id());
+        return QI_OK;
+    } else {
         log_error(logger, "## Query %d: Storage rechazó TAG", obtener_query_id());
-        enviar_error_a_master(WORKER_FINALIZACION,"Storage rechazó TAG");
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        char * motivo = list_remove(paquete_recv, 0);
+        enviar_error_a_master(WORKER_FINALIZACION,motivo);
         return QI_ERR_STORAGE;
     }
-
-    // memoria_actualizar_tag(arch_ori, tag_ori, arch_dest, tag_dest);
-
-    log_info(logger, "## Query %d: TAG exitoso", obtener_query_id());
-    return QI_OK;
 }
 
 qi_status_t ejecutar_COMMIT(char* archivo, char* tag) {
@@ -435,20 +440,22 @@ qi_status_t ejecutar_COMMIT(char* archivo, char* tag) {
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &query_id_temp, sizeof(int));
 
-    int socket_storage = enviar_peticion_a_storage(paquete);
+    enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
-    
-    protocolo_socket resp = recibir_paquete_ok(socket_storage);
-    close(socket_storage);
+    protocolo_socket resp = recibir_operacion(socket_storage);
     if (resp == OK) {
-        memoria_agregar_commit(archivo, tag);
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        list_destroy_and_destroy_elements(paquete_recv, free);
         log_info(logger, "## Query %d: COMMIT exitoso", obtener_query_id());
         return QI_OK;
+    } else {
+        log_error(logger, "## Query %d: Error en COMMIT", obtener_query_id());
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        char * motivo = list_remove(paquete_recv, 0);
+        enviar_error_a_master(WORKER_FINALIZACION,motivo);
+        return QI_ERR_PARSE;
     }
-    log_error(logger, "## Query %d: Error en COMMIT", obtener_query_id());
-    enviar_error_a_master(WORKER_FINALIZACION,"Error en COMMIT");
-    return QI_ERR_PARSE;
 }
 
 
@@ -473,43 +480,31 @@ qi_status_t ejecutar_DELETE(char* archivo, char* tag) {
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
     agregar_a_paquete(paquete, &query_id_temp, sizeof(int));
-
-    int socket_storage = enviar_peticion_a_storage(paquete);
+    
+    enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
-
-
-    protocolo_socket respuesta = recibir_paquete_ok(socket_storage);
-    close(socket_storage);
-    if (respuesta == OK) {
+    protocolo_socket resp = recibir_operacion(socket_storage);
+    if (resp == OK) {
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        list_destroy_and_destroy_elements(paquete_recv, free);
         log_info(logger, "## Query %d: DELETE exitoso", obtener_query_id());
         memoria_invalidar_file_tag_completo(archivo, tag);
         return QI_OK;
     } else {
         log_error(logger, "## Query %d: Error en DELETE", obtener_query_id());
-        enviar_error_a_master(WORKER_FINALIZACION,"Error en DELETE");
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        char * motivo = list_remove(paquete_recv, 0);
+        enviar_error_a_master(WORKER_FINALIZACION,motivo);
         return QI_ERR_PARSE;
     }
 
 }
-int enviar_peticion_a_storage(t_paquete * paquete){
-    int socket_storage;
-    
-    do
-	{
-		socket_storage = crear_conexion(ip_storage, puerto_storage);
-		sleep(1);
-        log_debug(logger,"Intentando conectar a STORAGE");        
-	}while(socket_storage == -1);
-
-    enviar_paquete(paquete, socket_storage);
-
-    return socket_storage;
-}
 
 int enviar_error_a_master(protocolo_socket codigo,char* error){
-    t_paquete* paquete = crear_paquete(codigo);
+    t_paquete* paquete = crear_paquete(WORKER_FINALIZACION);
     agregar_a_paquete(paquete, error, strlen(error) + 1);
     enviar_paquete(paquete, socket_master);
     eliminar_paquete(paquete);
+    log_debug(logger, "enviando error a master");
 }

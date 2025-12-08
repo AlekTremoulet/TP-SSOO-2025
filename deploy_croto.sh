@@ -34,7 +34,7 @@ echo "LOG_LEVEL=${LOG_LEVEL}"
 
 #query.config
 echo "
-IP_MASTER=${PUERTO_MASTER}
+IP_MASTER=${IP_MASTER}
 PUERTO_MASTER=${PUERTO_MASTER}
 LOG_LEVEL=${LOG_LEVEL}" > "${dir_query}/query.config"
 

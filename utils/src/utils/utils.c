@@ -342,8 +342,8 @@ char* string_array_to_string(char** array) {
 }
 
 
-char * error_storage_string(protocolo_socket  error){
-    switch (error){
+char * error_storage_string(protocolo_socket * error){
+    switch (*error){
         case ERR_ESCRITURA_ARCHIVO_COMMITED: return "Error, el archivo esta commiteado"; break;
         case ERR_FILE_PREEXISTENTE: return "Error, arhivo existente"; break;
         case ERR_LECTURA_FUERA_DEL_LIMITE: return "Error, lectura fuera del limite";break;

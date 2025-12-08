@@ -8,6 +8,8 @@ extern int Retardo_reemplazo;
 t_list* filetag_commiteados;
 t_memoria* Memoria = NULL;
 
+extern int socket_storage;
+
 int obtener_query_id();
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina_local){
@@ -190,21 +192,19 @@ static bool enviar_marco_a_storage(int marco) {
     agregar_a_paquete(paquete, frame->data, Memoria->tam_pagina);
     agregar_a_paquete(paquete, &query_id_temp, sizeof(int));
 
-
-    int socket_storage = enviar_peticion_a_storage(paquete);
-    eliminar_paquete(paquete);
-
-    protocolo_socket resp = recibir_paquete_ok(socket_storage);
-    close(socket_storage);
+    enviar_paquete(paquete, socket_storage);
+    protocolo_socket resp = recibir_operacion(socket_storage);
     if (resp == OK) {
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        list_destroy_and_destroy_elements(paquete_recv, free);
         frame->modificado = false;
         log_debug(logger, "Marco %d (p.%d %s:%s) enviado a Storage y marcado limpio",marco, frame->nro_pag_logica, frame->archivo, frame->tag);
         return true;
-    } 
-
-    else {
+    } else {
         log_error(logger, "Error al enviar marco %d a Storage", marco);
-        enviar_error_a_master(resp,"Error al enviar marco");
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        char * motivo = list_remove(paquete_recv, 0);
+        enviar_error_a_master(resp,motivo);
         return false;
     }
 }
@@ -246,21 +246,29 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     agregar_a_paquete(paquete, &nro_pagina, sizeof(int));
     agregar_a_paquete(paquete, &query_id_temp, sizeof(int));
 
-    int socket_storage = enviar_peticion_a_storage(paquete);
+    enviar_paquete(paquete, socket_storage);
     eliminar_paquete(paquete);
 
     int size_recv = 0;
     protocolo_socket cod_op = recibir_operacion(socket_storage);
-    t_list* paquete_recv = recibir_paquete(socket_storage);
-    close(socket_storage);
-    char * buffer = list_remove(paquete_recv,0);
-    if (!buffer) {
-        log_error(logger, "Error recibiendo pagina %d de %s:%s desde Storage", nro_pagina, archivo, tag);
-        if (buffer) 
-            free(buffer);
-        return -1;
+    char * buffer;
+    if(cod_op == OK){
+        t_list* paquete_recv = recibir_paquete(socket_storage);
+        buffer = list_remove(paquete_recv,0);
+        if (!buffer) {
+            log_error(logger, "Error recibiendo pagina %d de %s:%s desde Storage", nro_pagina, archivo, tag);
+            if (buffer) 
+                free(buffer);
+            return -1;
+        }
+    }else {
+        log_error(logger, "## Query %d: Error de Read", obtener_query_id());
+        t_list * paquete_recv = recibir_paquete(socket_storage);
+        char * motivo = list_remove(paquete_recv, 0);
+        enviar_error_a_master(WORKER_FINALIZACION,motivo);
+        return QI_ERR_STORAGE;
     }
-
+    
     // Copiar al marco
     memcpy(Memoria->marcos[libre].data, buffer, Memoria->tam_pagina);
     free(buffer);
@@ -555,4 +563,3 @@ qi_status_t memoria_flush_global() { //cuando se desaloja limpia las paginas mod
     log_info(logger, "## Query %d: FLUSH GLOBAL completado", obtener_query_id());
     return QI_OK;
 }
-
