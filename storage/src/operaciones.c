@@ -20,12 +20,12 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
     char *directorio_config_asociada = cargar_archivo("",config_asociada);
     log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
 
-    DIR* dir = opendir(archivo.ruta_tag);
-    if (dir) {
-        closedir(dir);
-        return "Error_create";
-    }
-    closedir(dir);
+    // DIR* dir = opendir(archivo.ruta_base);
+    // if (dir) {
+    //     closedir(dir);
+    //     return "Error_create";
+    // }
+    // closedir(dir);
 
     char *Estado = "WORK IN PROGRESS";
     char *Blocks = "[]";

@@ -283,7 +283,7 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     Memoria->marcos[libre].ult_usado = Memoria->time_count++;
     log_debug(logger, "Pagina %d de %s:%s cargada en marco %d", nro_pagina, archivo, tag, libre);
 
-    return libre;
+    return 0;
 }
 
 static bool asegurar_paginas_cargadas(const char* archivo, const char* tag, int direccion_base, int cantidad_bytes) {
