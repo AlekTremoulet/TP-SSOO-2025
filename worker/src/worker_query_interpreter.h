@@ -15,6 +15,7 @@ typedef enum {
     QI_ERR_NO_ENCONTRADA, 
     QI_ERR_NO_HAY_ESPACIO,
     QI_ERR_STORAGE,
+    QI_ERR_FLUSH,
     QI_ERR_COMMIT_CERRADO
 } qi_status_t;
 

@@ -146,7 +146,7 @@ void *conexion_cliente_master(void *args){
             list_destroy_and_destroy_elements(lista_queries->lista, free);
             lista_queries->lista = list_create();
 
-            char * temp_query_path = malloc(strlen(query_path)+strlen(Path_Queries)+1);
+            char * temp_query_path = malloc(strlen(query_path)+strlen(Path_Queries)+2);
             strcpy(temp_query_path, Path_Queries);
             strcat(temp_query_path, "/");
             strcat(temp_query_path, query_path);

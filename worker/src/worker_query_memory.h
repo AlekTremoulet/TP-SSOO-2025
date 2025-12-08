@@ -72,8 +72,9 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char *
 qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio);
 qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag);
 
-qi_status_t memoria_flush_global();
-
+qi_status_t memoria_flush_global(qi_status_t status);
 
 
 #endif
+
+

@@ -33,7 +33,7 @@ void memoria_invalidar_file_tag_completo(const char* archivo, const char* tag);
 void memoria_eliminar_commit(const char* archivo, const char* tag);
 void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam);
 
-qi_status_t memoria_flush_global();
+qi_status_t memoria_flush_global(qi_status_t status);
 
 
 int obtener_query_id();
@@ -197,7 +197,6 @@ qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args) {
 
         case END:
              log_info(logger, "## Query %d: Finalizando query", obtener_query_id());
-             memoria_flush_global();
             return QI_END;
 
         default:
@@ -235,17 +234,17 @@ void loop_principal(){
         sem_wait(sem_hay_query);
         if (obtener_desalojo_flag()){
 
-            memoria_flush_global();
+            memoria_flush_global(QI_OK);
             sem_wait(sem_desalojo_waiter);
 
             setear_desalojo_flag(false);
 
         }else {
-            int status = ejecutar_query(query_path);
+            qi_status_t status = ejecutar_query(query_path);
             if (!status){
                 sem_post(sem_hay_query);
             }else {
-                memoria_flush_global();
+                memoria_flush_global(status);
             }
         }  
     }

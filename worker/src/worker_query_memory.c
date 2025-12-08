@@ -296,6 +296,9 @@ static bool asegurar_paginas_cargadas(const char* archivo, const char* tag, int 
         int existe = buscar_marco_por_pagina(archivo, tag, p);
         if (existe == -1) {
             existe = cargar_pagina_en_marco(archivo, tag, p);
+            if (existe == QI_ERR_STORAGE){
+                return false;
+            }
             if (existe == -1) 
                 return false;
             // hay que poner retardo?
@@ -458,27 +461,29 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_logica,char
 
 
 
-qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio) {
+qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int dir_logica, int tamanio) {
     if (!Memoria) 
         return QI_ERR_FILE;
     if (!archivo || !tag || tamanio <= 0) 
         return QI_ERR_PARSE;
 
-    log_info(logger, "## Query %d: READ en Memoria %s:%s desde %d (%d bytes)", obtener_query_id(), archivo, tag, direccion_base, tamanio);
+    log_info(logger, "## Query %d: READ en Memoria %s:%s desde %d (%d bytes)", obtener_query_id(), archivo, tag, dir_logica, tamanio);
 
-    if (direccion_base < 0 || direccion_base + tamanio > Memoria->tam_total) {
+    if (dir_logica < 0 || tamanio < 0) {
         log_error(logger, "## Query %d: READ fuera de rango", obtener_query_id());
+        char * motivo = "READ fuera de rango";
+        enviar_error_a_master(WORKER_FINALIZACION,motivo);
         return QI_ERR_PARSE;
     }
 
-    if (!asegurar_paginas_cargadas(archivo, tag, direccion_base, tamanio)) {
+    if (!asegurar_paginas_cargadas(archivo, tag, dir_logica, tamanio)) {
         log_error(logger, "## Query %d: Error al obtener páginas necesarias desde Storage (READ)", obtener_query_id());
         return QI_ERR_STORAGE;
     }
 
     char* buffer = malloc(tamanio + 1);
     int bytes_restantes = tamanio;
-    int cursor_logico = direccion_base;
+    int cursor_logico = dir_logica;
     int pos_buf = 0;
     while (bytes_restantes > 0) {
         int p = direccion_a_pagina(cursor_logico);
@@ -530,7 +535,7 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag) {
         if (f->presente && f->modificado && f->archivo && f->tag && strcmp(f->archivo, archivo) == 0 && strcmp(f->tag, tag) == 0) {
             if (!enviar_marco_a_storage(i)) {
                 log_error(logger, "## Query %d: Error enviando pagina %d durante FLUSH", obtener_query_id(), f->nro_pag_logica);
-                return QI_ERR_STORAGE;
+                return QI_ERR_FLUSH;
             }
             any_sent = true;
         }
@@ -544,7 +549,11 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag) {
     return QI_OK;
 }
 
-qi_status_t memoria_flush_global() { //cuando se desaloja limpia las paginas modificadas
+qi_status_t memoria_flush_global(qi_status_t status) { //cuando se desaloja limpia las paginas modificadas
+    if(status == QI_ERR_FLUSH){
+        return QI_ERR_FLUSH;
+    }
+    
     if (!Memoria)
         return QI_ERR_FILE;
 

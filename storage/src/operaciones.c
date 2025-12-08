@@ -520,6 +520,14 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, pr
 }
 
 void Crear_tag(char * Origen, char * Destino, char* tag_origen, char* tag_destino, int query_id, protocolo_socket * error) {
+    // deteccion de error:
+    // Origen tiene que ser igual a destino
+    // Origen tiene que existir
+    // tag_origen tiene que ser distinto de tag_destino
+    // tag_destino no tiene que existir
+
+    // si se cumple cualquiera -> tirar error de storage: motivo: lo que haya pasado arriba
+
     char* ruta_origen = malloc(strlen(dir_files) + strlen(Origen) + strlen(tag_origen) + 3);
     sprintf(ruta_origen, "%s/%s/%s", dir_files, Origen, tag_origen);
 
