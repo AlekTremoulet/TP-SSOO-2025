@@ -77,11 +77,17 @@ LOG_LEVEL=${LOG_LEVEL}" > "${dir_master}/P_memoria_worker.config"
 
 
 
-#P_planificacion.config
+#P_planificacion_fifo.config
 echo "PUERTO_ESCUCHA=${PUERTO_MASTER}
 ALGORITMO_PLANIFICACION=FIFO
 TIEMPO_AGING=500
-LOG_LEVEL=${LOG_LEVEL}" > "${dir_master}/P_planificacion.config"
+LOG_LEVEL=${LOG_LEVEL}" > "${dir_master}/P_planificacion_fifo.config"
+
+#P_planificacion_priori.config
+echo "PUERTO_ESCUCHA=${PUERTO_MASTER}
+ALGORITMO_PLANIFICACION=PRIORIDADES
+TIEMPO_AGING=500
+LOG_LEVEL=${LOG_LEVEL}" > "${dir_master}/P_planificacion_priori.config"
 
 
 #P_storage.config
