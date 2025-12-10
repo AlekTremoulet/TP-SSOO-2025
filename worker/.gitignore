@@ -2,6 +2,7 @@
 bin/
 obj/
 *.log
+*.config
 
 # Eclipse files
 .settings/
