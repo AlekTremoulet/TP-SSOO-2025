@@ -9,6 +9,10 @@
 
 # Config files
 *.config
+master/*.config
+query_control/*.config
+worker/*.config
+storage/*.config
 
 # Prerequisites
 *.d
@@ -62,3 +66,4 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
