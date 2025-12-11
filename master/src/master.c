@@ -426,6 +426,7 @@ void planificador_fifo() {
         encolar_query_en_exec(q); // Q en EXEC
 
         encolar_worker(workers_busy, w, -1);
+        log_debug(logger, "Worker %d se encola en lista busy", w->id);
 
         // creo el thread para worker+query
         pthread_t th_wq;
@@ -506,6 +507,7 @@ void *hilo_worker_query(void *arg) {
 
                 // reencolar worker como libre
                 encolar_worker(workers_libres, w, -1);
+                log_debug(logger, "Worker %d se encola en lista ready", w->id);
 
                 query_finalizar(q, motivo);
 
@@ -638,8 +640,8 @@ void planificador_prioridades() {
         sem_wait(workers_libres->sem);
         sem_wait(cola_ready_queries->sem);
 
-        worker_t *w = desencolar_worker(workers_libres, 0);
         query_t *q = sacar_mejor_query_ready(); // numero mas chico=mejor prioridad
+        worker_t *w = desencolar_worker(workers_libres, 0);
 
         if (w == NULL || q == NULL) {
             if (w != NULL) {
@@ -659,6 +661,8 @@ void planificador_prioridades() {
 
         // marco al W como ocupado
         encolar_worker(workers_busy, w, -1);
+        log_debug(logger, "Worker %d se encola en lista busy", w->id);
+
 
         log_info(logger, "PRIORIDADES: Se envía la Query <%d> (PRIORIDAD <%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
 

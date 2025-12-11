@@ -55,6 +55,12 @@
       "configurations": ["RUN_WORKER", "RUN_STORAGE"],
       // "preLaunchTask": "${defaultBuildTask}",
       "stopAll": false
+    },
+    {
+      "name": "SIN QUERY",
+      "configurations": ["RUN_MASTER","RUN_WORKER","RUN_STORAGE"],
+      // "preLaunchTask": "${defaultBuildTask}",
+      "stopAll": false
     }
   ]
   }
