@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["query.config","AGING_1",1],
+      "args": ["query.config","FILE_EXISTENTE",1],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

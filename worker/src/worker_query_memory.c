@@ -8,6 +8,9 @@ extern int Retardo_reemplazo;
 t_list* filetag_commiteados;
 t_memoria* Memoria = NULL;
 
+//workaround para no flushear 2 veces
+int error_de_flush = false;
+
 extern int socket_storage;
 
 int obtener_query_id();
@@ -535,6 +538,7 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag) {
         if (f->presente && f->modificado && f->archivo && f->tag && strcmp(f->archivo, archivo) == 0 && strcmp(f->tag, tag) == 0) {
             if (!enviar_marco_a_storage(i)) {
                 log_error(logger, "## Query %d: Error enviando pagina %d durante FLUSH", obtener_query_id(), f->nro_pag_logica);
+                error_de_flush = true;
                 return QI_ERR_FLUSH;
             }
             any_sent = true;
@@ -554,21 +558,29 @@ qi_status_t memoria_flush_global(qi_status_t status) { //cuando se desaloja limp
         return QI_ERR_FLUSH;
     }
     
-    if (!Memoria)
+    if (!Memoria){
         return QI_ERR_FILE;
+    }
 
-    log_info(logger, "## Query %d: Ejecutando FLUSH GLOBAL", obtener_query_id());
+    if(error_de_flush){
+        return 0;
+    }
+
+    int id = obtener_query_id();
+
+    
+    log_info(logger, "## Query %d: Ejecutando FLUSH GLOBAL", id);
 
     for (int i = 0; i < Memoria->cant_marcos; i++) {
         t_pagina* f = &Memoria->marcos[i];
 
         if (f->presente && f->modificado && f->archivo && f->tag) {
             if (!enviar_marco_a_storage(i)) {
-                log_error(logger,"## Query %d: Error enviando página %d durante FLUSH GLOBAL",obtener_query_id(), f->nro_pag_logica);
+                log_error(logger,"## Query %d: Error enviando página %d durante FLUSH GLOBAL",id, f->nro_pag_logica);
                 return QI_ERR_STORAGE;
             }
         }
     }
-    log_info(logger, "## Query %d: FLUSH GLOBAL completado", obtener_query_id());
+    log_info(logger, "## Query %d: FLUSH GLOBAL completado", id);
     return QI_OK;
 }

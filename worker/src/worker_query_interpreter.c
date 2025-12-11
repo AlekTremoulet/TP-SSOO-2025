@@ -10,6 +10,9 @@ extern char * ip_storage, *puerto_storage;
 extern int socket_master;
 extern int socket_storage;
 
+//workaround para no flushear 2 veces
+extern int error_de_flush;
+
 
 qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_base,char * contenido);
 qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int direccion_base, int tamanio);
@@ -330,9 +333,7 @@ qi_status_t ejecutar_CREATE(char* archivo, char* tag) {
 }
 
 qi_status_t ejecutar_TRUNCATE(char* archivo, char* tag, int nuevo_tamanio) {
-log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", obtener_query_id(), archivo, tag, nuevo_tamanio);
-
-
+    log_info(logger, "## Query %d: Ejecutando TRUNCATE %s:%s %d", obtener_query_id(), archivo, tag, nuevo_tamanio);
 
     int query_id_temp = obtener_query_id();
 
