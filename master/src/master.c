@@ -582,7 +582,7 @@ void *hilo_worker_query(void *arg) {
                 w->query_id = -1; 
                 encolar_worker(workers_libres, w, -1);
 
-                break;
+                return NULL;
         }
     }
     
