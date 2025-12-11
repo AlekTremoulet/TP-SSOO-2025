@@ -10,12 +10,18 @@ int nivel_multiprocesamiento;
 pthread_mutex_t * mutex_cantidad_workers;
 int cantidad_workers;
 
+sem_t * sem_desalojo_completado;
+
 char * algo_planificacion;
 
 int id_query_actual;
 
 int tiempo_aging_ms = 0;
 
+//flag global aging + cond + mutex
+int flag_global_aging;
+pthread_cond_t * cond_global_aging;
+pthread_mutex_t * mutex_global_aging;
 
 // colas thread-safe
 list_struct_t *cola_ready_queries;  // elementos: query_t*
@@ -25,9 +31,6 @@ list_struct_t *workers_libres;      // elementos: worker_t*
 list_struct_t *workers_busy;        // elementos: worker_t*
 
 pthread_mutex_t m_id;
-
-static void posible_desalojo(query_t *q);
-
 
 int main(int argc, char* argv[]) {
     id_query_actual = 1;
@@ -99,12 +102,21 @@ void levantarConfig(char *args){
 }
 
 void inicializarEstructurasMaster(){
+    //colas
     cola_ready_queries = inicializarLista();
     cola_exec_queries = inicializarLista();
     workers_busy = inicializarLista();
     workers_libres = inicializarLista();
+    
+    //mutex & sem MISC
     mutex_nivel_multiprocesamiento = inicializarMutex();
     mutex_cantidad_workers = inicializarMutex();
+    sem_desalojo_completado = inicializarSem(0);
+
+    //flag global aging
+    flag_global_aging = false;
+    cond_global_aging = inicializarCond();
+    mutex_global_aging = inicializarMutex();
 }
 
 void aumentar_nivel_multiprocesamiento(){
@@ -206,7 +218,7 @@ void *handler_cliente(void *arg) {
                 "## Se conecta un Query Control para ejecutar la Query <%s> con prioridad <%d> - Id asignado: <%d>. Nivel multiprocesamiento <%d>",
                 archivo_recv, prioridad, id_asignado, obtener_nivel_multiprocesamiento());
 
-            posible_desalojo(q);
+            //posible_desalojo(q);
  
             // encolo al final -> FIFO
             encolar_query(cola_ready_queries, q, -1);
@@ -322,7 +334,10 @@ void encolar_query(list_struct_t *cola, query_t *q, int index){
 }
 worker_t *desencolar_worker(list_struct_t *cola, int index){
     pthread_mutex_lock(cola->mutex);
-    worker_t *w = list_remove(cola->lista, index);
+    if(list_is_empty(cola->lista)){
+        pthread_mutex_unlock(cola->mutex);
+        return NULL;
+    }worker_t *w = list_remove(cola->lista, index);
     pthread_mutex_unlock(cola->mutex);
     return w;
 }
@@ -364,19 +379,19 @@ static query_t *obtener_peor_query_exec(void) {
     }
 
     int indice_peor = 0;
-    query_t *peor_query = list_get(cola_exec_queries->lista, 0);
-
-    for (int i = 1; i < size; i++) {
-        query_t *q = list_get(cola_exec_queries->lista, i);
-
-        // mayor numero = peor prioridad
-        if (q->prioridad > peor_query->prioridad) {
-            peor_query = q;
-            indice_peor = i;
+    query_t *peor_query = NULL;
+    query_t *q_aux;
+    t_list_iterator * iterator = list_iterator_create(cola_ready_queries->lista);
+    while (list_iterator_has_next(iterator)){
+        q_aux = list_iterator_next(iterator);
+        if (q_aux->prioridad > peor_query->prioridad) {
+            peor_query = q_aux;
+            indice_peor = list_iterator_index(iterator);
         }
     }
-
-    log_debug(logger, "Peor Query en EXEC: id <%d> prioridad <%d> (indice %d)", peor_query->id_query, peor_query->prioridad, indice_peor);
+    if (peor_query!=NULL){
+        log_debug(logger, "Peor Query en EXEC: id <%d> prioridad <%d> (indice %d)", peor_query->id_query, peor_query->prioridad, indice_peor);
+    }
 
     pthread_mutex_unlock(cola_exec_queries->mutex);
     return peor_query;
@@ -404,6 +419,10 @@ void planificador_fifo() {
 
         if (w == NULL || q == NULL) {
             // si no hay elementos, sigo
+            log_error(logger, "PLANIFIFO: Avanzo el planificador y no encontro worker o query ready");
+            //devuelvo a sus respectivas listas
+            encolar_worker(workers_libres, w, 0);
+            encolar_query(cola_ready_queries, q, 0);
             continue;
         }
 
@@ -533,7 +552,7 @@ void *hilo_worker_query(void *arg) {
                 log_info(logger, "## Se desaloja la Query <%d> (<%d>) del Worker <%d> - Motivo: <PRIORIDAD>", q->id_query, q->prioridad, w->id);
 
                 desencolar_query_de_exec(q->id_query);
-
+                
                 // reencolo la query en READY para que vuelva a planificarse
                 encolar_query(cola_ready_queries, q, -1);
 
@@ -543,6 +562,8 @@ void *hilo_worker_query(void *arg) {
                 // reencolo el worker como libre
                 encolar_worker(workers_libres, w, -1);
 
+                sem_post(sem_desalojo_completado);
+
                 free(dwq);
 
                 //en caso de no-lectura se corta el while
@@ -551,6 +572,8 @@ void *hilo_worker_query(void *arg) {
 
             default:
                 log_error(logger, "Worker <%d> devolvió un código inesperado <%d>", w->id, cod);
+
+                query_finalizar(q, "Protocolo desconocido de worker");
                 
                 free(q->archivo);
                 free(q);
@@ -596,6 +619,8 @@ void *hilo_aging(void *arg) {
 
         list_iterator_destroy(iterador_ready);
         pthread_mutex_unlock(cola_ready_queries->mutex);
+
+        destrabar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging);
     }
 
     return NULL;
@@ -614,12 +639,13 @@ static query_t *sacar_mejor_query_ready(void) {
     int indice_prioridad_minima = 0; 
     query_t *query_con_mejor_prioridad = list_get(cola_ready_queries->lista, 0); // asumo que es la de la primera posicion
 
-    for (int i = 1; i < size; i++) {
-        query_t *q = list_get(cola_ready_queries->lista, i);
-        // menor numero = mejor prioridad
+    query_t *q;
+    t_list_iterator * iterator = list_iterator_create(cola_ready_queries->lista);
+    while (list_iterator_has_next(iterator)){
+        q = list_iterator_next(iterator);
         if (q->prioridad < query_con_mejor_prioridad->prioridad) {
             query_con_mejor_prioridad = q;
-            indice_prioridad_minima = i;
+            indice_prioridad_minima = list_iterator_index(iterator);
         }
     }
 
@@ -641,12 +667,30 @@ void planificador_prioridades() {
         sem_wait(cola_ready_queries->sem);
 
         query_t *q = sacar_mejor_query_ready(); // numero mas chico=mejor prioridad
-        worker_t *w = desencolar_worker(workers_libres, 0);
+        worker_t *w;
+
+        int status = posible_desalojo(q);
+        if(status == 0){ // Hay workers libres
+            w = desencolar_worker(workers_libres, 0);
+        }else if (status == 1){ // hubo desalojo
+            sem_wait(sem_desalojo_completado);
+            w = desencolar_worker(workers_libres, 0);
+        }
+        // no hubo desalojo. Hacer esto con el flag global esta mal... pero no taaan mal.
+        //Por lo menos evitamos espera activa por definicion, peeeero igualmente va a correr el plani cada vuelta del while(1) de aging
+        else { 
+            encolar_query(cola_ready_queries, q, -1);
+            esperar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging); // espero al aging
+            trabar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging); // reinicio el flag
+            continue;
+        }
+        
 
         if (w == NULL || q == NULL) {
+            log_error(logger, "Planificador: El query o el worker son NULL");
             if (w != NULL) {
+                log_error(logger, "Planificador avanzó pero no encontro queries. wtf?");
                 encolar_worker(workers_libres, w, -1);
-                sem_post(workers_libres->sem);
             }
             // no hay Q
             continue;
@@ -673,37 +717,40 @@ void planificador_prioridades() {
     }
 }
 
-static void posible_desalojo(query_t *q_nueva) {
+/// @brief Desaloja el worker en caso de que se cumplan todas las condiciones necesarias
+/// @param q_nueva 
+/// @return 0: Workers libres, 1: desalojo, 2: no desalojo
+static int posible_desalojo(query_t *q_nueva) {
     if (strcmp(algo_planificacion, "PRIORIDADES") != 0) {
-        return;
+        log_error(logger, "Estas usando posible_desalojo() sin tener planificador de prioridades");
+        return 2;
     }
 
     // si hay un w libre no desalojo
     if (hay_workers_libres()) {
         log_info(logger, "Q <%d> (prio %d). Hay workers libres", q_nueva->id_query, q_nueva->prioridad);
-        return;
+        return 0;
     }
 
     query_t *peor = obtener_peor_query_exec();
 
     if (peor == NULL) {
         log_info(logger, "Q <%d> (prio %d). EXEC vacio, no hay desalojo.",  q_nueva->id_query, q_nueva->prioridad);
-        return;
+        return 2;
     }
-
-    log_info(logger, "Q <%d> (prio %d). Peor en EXEC: <%d> (prio %d).", q_nueva->id_query, q_nueva->prioridad, peor->id_query, peor->prioridad);
+    log_info(logger, "Llego query a ready: <%d> (prio %d). La peor query en exec es: <%d> (prio %d).", q_nueva->id_query, q_nueva->prioridad, peor->id_query, peor->prioridad);
 
     // si la nueva no es mejor que la peor en exec (menor numero = mejor prioridad)
     if (q_nueva->prioridad >= peor->prioridad) {
         log_info(logger, "La Query <%d> no mejora la prioridad de la peor en EXEC. No se desaloja.", q_nueva->id_query);
-        return;
+        return 2;
     }
 
     // la nueva es mejor que la peor en exec y no hay workers libres
     worker_t *w_a_desalojar = buscar_worker_por_query_id(peor->id_query);
     if (w_a_desalojar == NULL) {
-        log_error(logger, "No hay Worker que ejecute la Query <%d> para desalojar.", peor->id_query);
-        return;
+        log_error(logger, "No hay Worker que ejecute la Query <%d> para desalojar. Hay un query en exec incorrectamente", peor->id_query);
+        return 2;
     }
 
     log_info(logger, "Se desaloja la Query <%d> del Worker <%d> para ejecutar la nueva Query <%d> (prio mejor).", peor->id_query, w_a_desalojar->id, q_nueva->id_query);
@@ -711,6 +758,8 @@ static void posible_desalojo(query_t *q_nueva) {
     t_paquete *paquete_desalojo = crear_paquete(DESALOJO);
     enviar_paquete(paquete_desalojo, w_a_desalojar->socket_worker);
     eliminar_paquete(paquete_desalojo);
+
+    return 1;
 }
 
 static bool hay_workers_libres(void) {

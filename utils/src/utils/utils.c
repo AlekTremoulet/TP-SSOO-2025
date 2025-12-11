@@ -304,7 +304,14 @@ void esperar_flag_global(int * flag, pthread_mutex_t *mutex, pthread_cond_t *con
 void destrabar_flag_global(int *flag, pthread_mutex_t *mutex, pthread_cond_t *cond){
     
     pthread_mutex_lock(mutex);
-    *flag = 1;
+    *flag = true;
+    pthread_cond_broadcast(cond);
+    pthread_mutex_unlock(mutex);
+}
+void trabar_flag_global(int *flag, pthread_mutex_t *mutex, pthread_cond_t *cond){
+    
+    pthread_mutex_lock(mutex);
+    *flag = false;
     pthread_cond_broadcast(cond);
     pthread_mutex_unlock(mutex);
 }
