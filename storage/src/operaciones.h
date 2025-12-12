@@ -34,7 +34,9 @@ extern char* error_storage;
 //Operaciones
 
 void Crear_file(char* archivo,char* tag, int query_id, protocolo_socket * error);
-void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo_socket * error); 
+void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo_socket * error);
+t_config *obtener_metadata(char *archivo, char *tag);
+
 void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id, protocolo_socket * error); 
 char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, protocolo_socket * error); 
 void Eliminar_tag(char* archivo, char* tag, int query_id, protocolo_socket * error); 

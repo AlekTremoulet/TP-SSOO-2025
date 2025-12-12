@@ -240,17 +240,23 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo
     }
 }
 
-void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id, protocolo_socket * error){
-    
+t_config * obtener_metadata(char* archivo, char* tag){
+
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
     sprintf(metadata_config_asociado, "%s/%s/%s/metadata.config", dir_files, archivo, tag);
 
-    t_config *config_a_escribir = config_create(metadata_config_asociado);
+    return config_create(metadata_config_asociado);
+}
+
+
+
+void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id, protocolo_socket * error){
+
+    t_config *config_a_escribir = obtener_metadata(archivo, tag);
     
     if (config_a_escribir == NULL) {
-        log_error(logger, "Error: No se pudo abrir la metadata en %s", metadata_config_asociado);
+        log_error(logger, "Error: No se pudo abrir la metadata en %s:%s", archivo, tag);
         *error = ERR_METADATA;
-        free(metadata_config_asociado);
         return;
     }
 
@@ -260,7 +266,6 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
         log_error(logger, "Error, ESCRITURA NO PERMITIDA (ARCHIVO COMITEADO)");
         *error = ERR_ESCRITURA_ARCHIVO_COMMITED;
         config_destroy(config_a_escribir);
-        free(metadata_config_asociado);
     }
     else
     {
@@ -278,7 +283,6 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
             string_iterate_lines(bloques_actuales, (void*) free);
             free(bloques_actuales);
             config_destroy(config_a_escribir);
-            free(metadata_config_asociado);
             return;
         }
 
@@ -370,9 +374,7 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
         string_iterate_lines(bloques_actuales, (void*) free);
         free(bloques_actuales);
         free(path_bloque_fisico);
-        config_destroy(config_a_escribir);
-        free(metadata_config_asociado);
-        
+        config_destroy(config_a_escribir);        
     }
 }
 
@@ -586,6 +588,33 @@ void Eliminar_tag(char * Origen, char* tag, int query_id, protocolo_socket * err
 
         if (comando == NULL) return;
 
+        struct stat st;
+        char * path = malloc(strlen(dir_files)+strlen(Origen)+strlen(tag)+3);
+        strcpy(path, dir_files);
+        strcat(path, "/");
+        strcat(path, Origen);
+        strcat(path, "/");
+        strcat(path, tag);
+
+        t_config * config_a_leer = obtener_metadata(Origen, tag);
+        char** bloques_actuales = config_get_array_value(config_a_leer, "Blocks");
+
+        int cantidad = 0;
+        for (int i = 0;bloques_actuales[i]!=NULL;i++){
+            char aux[7];
+            sprintf(aux, "%04d", atoi(bloques_actuales[i]));
+            char * file = malloc(strlen(path) + 1 + strlen(aux) + strlen(".dat") + 1);
+            strcpy(file, dir_physical_blocks);
+            strcat(file, "/block");
+            strcat(file, aux);
+            strcat(file, ".dat");
+            stat(file, &st);
+            if (st.st_nlink == 2){
+                liberar_espacio_bitmap(atoi(bloques_actuales[i]));
+            }
+            free(file);
+        }
+        
         sprintf(comando, "rm -rf %s/%s/%s", dir_files, Origen, tag);
 
         int resultado = system(comando);
