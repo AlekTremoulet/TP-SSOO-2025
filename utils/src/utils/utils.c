@@ -365,3 +365,14 @@ char * error_storage_string(protocolo_socket * error){
         default: return "Error desconocido"; break;
     }
 }
+void print_chars(void *ptr, size_t length) {
+    unsigned char *bytes = (unsigned char *)ptr;
+    for (size_t i = 0; i < length; i++) {
+        printf("%02X", bytes[i]);  // print each byte as a character
+    }
+    printf("\n");
+    for (size_t i = 0; i < length; i++) {
+        printf("%c", bytes[i]);  // print each byte as a character
+    }
+    printf("\n");
+}

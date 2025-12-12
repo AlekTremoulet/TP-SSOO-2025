@@ -241,6 +241,7 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo
 }
 
 void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenido, int query_id, protocolo_socket * error){
+    
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
     sprintf(metadata_config_asociado, "%s/%s/%s/metadata.config", dir_files, archivo, tag);
 
@@ -284,14 +285,17 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
         int bloque_fisico_actual = atoi(bloques_actuales[num_bloque_Log]);
 
         char* path_bloque_fisico = malloc(strlen(dir_physical_blocks) + 20);
+        char* nombre_bloque_fisico = malloc(20);
+
         sprintf(path_bloque_fisico, "%s/block%04d.dat", dir_physical_blocks, bloque_fisico_actual);
+        sprintf(nombre_bloque_fisico, "/block%04d%s", bloque_fisico_actual, "\0");
 
         struct stat st;
         int bloque_final_escrito = bloque_fisico_actual;
 
         if (stat(path_bloque_fisico, &st) == 0) {
             
-            if (st.st_nlink > 1) {
+            if (st.st_nlink > 1 || !bloque_fisico_actual) {
                 int nuevo_bloque_libre = espacio_disponible(bitmap);
                 
                 if (nuevo_bloque_libre == -1) {
@@ -304,7 +308,6 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
 
                     char* nombre_nuevo_bloque = malloc(20);
                     sprintf(nombre_nuevo_bloque, "/block%04d", nuevo_bloque_libre);
-                    escribir_en_hash(nombre_nuevo_bloque); 
                     
                     char* path_nuevo_bloque_fisico = malloc(strlen(dir_physical_blocks) + 20);
                     sprintf(path_nuevo_bloque_fisico, "%s%s.dat", dir_physical_blocks, nombre_nuevo_bloque);
@@ -314,6 +317,11 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
                         fwrite(contenido, sizeof(char), tam_bloque, f_bloque);
                         fclose(f_bloque);
                     }
+                    char * hash_nuevo = crypto_md5(contenido, tam_bloque);
+                    if(strcmp(retornar_hash(nombre_bloque_fisico),hash_nuevo)){
+                        escribir_en_hash(nombre_nuevo_bloque);
+                    }
+                    
 
                     char* archivo_tag = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 5);
                     sprintf(archivo_tag, "%s/%s/%s", dir_files, archivo, tag);
@@ -494,14 +502,13 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, pr
     sprintf(path_bloque_fisico, "%s/block%04d.dat", dir_physical_blocks, bloque_fisico_actual);
 
     FILE* f_bloque = fopen(path_bloque_fisico, "r");
-    char* buffer_contenido = NULL;
+    char* buffer_contenido = calloc(tam_bloque, 1);
 
     if (f_bloque != NULL) {
         fseek(f_bloque, 0, SEEK_END);
         long fsize = ftell(f_bloque);
         fseek(f_bloque, 0, SEEK_SET);
 
-        buffer_contenido = malloc(fsize + 1);
         fread(buffer_contenido, 1, fsize, f_bloque);
         buffer_contenido[fsize] = '\0';
         
@@ -518,6 +525,7 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, pr
     free(path_bloque_fisico);
     config_destroy(config_a_leer);
     free(metadata_config_asociado);
+
     return buffer_contenido;
 }
 
@@ -626,7 +634,7 @@ void Commit_tag(char* archivo, char* tag, int query_id, protocolo_socket * error
 
     for (int i = 0; bloques[i] != NULL; i++) {
         
-        if (strcmp(bloques[i], "0") == 0) continue; 
+        if (strcmp(bloques[i], "0") == 0) continue;
 
         char *id_bloque_actual_str = bloques[i];
         int id_bloque_actual_int = atoi(id_bloque_actual_str);
@@ -649,7 +657,6 @@ void Commit_tag(char* archivo, char* tag, int query_id, protocolo_socket * error
                         query_id, archivo, tag, i, nombre_fisico_actual);
 
                 unlink(path_logico);
-                unlink(path_fisico_actual);
                 
                 if (link(path_fisico_preexistente, path_logico) < 0) {
                     log_error(logger, "Error linkeando %s a %s", path_fisico_preexistente, path_logico);

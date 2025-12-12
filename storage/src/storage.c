@@ -90,6 +90,8 @@ void *thread_worker(void * args){
     protocolo_socket * error_devolucion = malloc(sizeof(protocolo_socket));
     *error_devolucion = OK;
 
+    t_paquete* paquete_send;
+
     int worker_id;
 
     while(1){
@@ -132,7 +134,11 @@ void *thread_worker(void * args){
             tag = list_remove(paquete_recv, 0);
             num_bloque_Log = *(int *)list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
-            Leer_bloque(archivo,tag,num_bloque_Log,query_id, error_devolucion);
+            void * lectura = Leer_bloque(archivo,tag,num_bloque_Log,query_id, error_devolucion);
+            paquete_send = crear_paquete(OP_READ);
+            agregar_a_paquete(paquete_send, lectura, tam_bloque);
+            enviar_paquete(paquete_send, socket_worker);
+            eliminar_paquete(paquete_send);
             break;
         case OP_TAG:
             paquete_recv = recibir_paquete(socket_worker);
@@ -162,7 +168,7 @@ void *thread_worker(void * args){
             worker_id = *(int *)list_remove(paquete_recv, 0);
             log_info(logger, "Se conecta un Worker con Id: <%d> ",worker_id); //hay que reviisar esto
             list_destroy_and_destroy_elements(paquete_recv, free);
-            t_paquete* paquete_send = crear_paquete(PARAMETROS_STORAGE);
+            paquete_send = crear_paquete(PARAMETROS_STORAGE);
             agregar_a_paquete(paquete_send,&tam_bloque,sizeof(int));
             enviar_paquete(paquete_send,socket_worker);
             eliminar_paquete(paquete_send);
@@ -180,7 +186,7 @@ void *thread_worker(void * args){
             eliminar_paquete(paquete);
             *error_devolucion=OK;
         }
-        else if (cod_op!=PARAMETROS_STORAGE){
+        else if (cod_op!=PARAMETROS_STORAGE&&cod_op!=OP_READ){
             enviar_paquete_ok(socket_worker);
         }
         
@@ -269,6 +275,10 @@ void inicializar_bloque_fisico(int numero_bloque){
 
     char *path_block_dat = cargar_archivo(dir_physical_blocks, nombre_archivo);;
     FILE *block_dat_file = fopen(path_block_dat, "wb+");
+
+    char *buffer = calloc(1, tam_bloque);
+    fwrite(buffer, 1, tam_bloque, block_dat_file);
+
     if (!block_dat_file) {
         log_error(logger,"Error al abrir blocks_hash_index.config");
         exit(EXIT_FAILURE);

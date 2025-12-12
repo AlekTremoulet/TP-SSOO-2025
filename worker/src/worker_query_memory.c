@@ -255,7 +255,7 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     int size_recv = 0;
     protocolo_socket cod_op = recibir_operacion(socket_storage);
     char * buffer;
-    if(cod_op == OK){
+    if(cod_op == OP_READ){
         t_list* paquete_recv = recibir_paquete(socket_storage);
         buffer = list_remove(paquete_recv,0);
         if (!buffer) {
@@ -271,7 +271,7 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
         enviar_error_a_master(WORKER_FINALIZACION,motivo);
         return QI_ERR_STORAGE;
     }
-    
+   
     // Copiar al marco
     memcpy(Memoria->marcos[libre].data, buffer, Memoria->tam_pagina);
     free(buffer);
@@ -435,7 +435,11 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_logica,char
     }
 
     // Escribir por partes en cada página
+    
+    int longitud_real = ((longitud + tam_pagina - 1) / tam_pagina) * tam_pagina;
     int bytes_restantes = longitud;
+    char *buffer = calloc(longitud_real, 1);
+    memcpy(buffer, contenido, longitud);
     int cursor_logico = dir_logica;
     while (bytes_restantes > 0) {
         int p = direccion_a_pagina(cursor_logico);
@@ -447,9 +451,8 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_logica,char
             }
         int espacio_en_pagina = Memoria->tam_pagina - offset;
         int a_escribir = (bytes_restantes <= espacio_en_pagina) ? bytes_restantes : espacio_en_pagina;
-        memcpy((char*)Memoria->marcos[marco].data + offset, contenido + (longitud - bytes_restantes), a_escribir);
-
-
+        memcpy((char*)Memoria->marcos[marco].data + offset, buffer + (longitud - bytes_restantes), a_escribir);
+        
         Memoria->marcos[marco].modificado = true;
         Memoria->marcos[marco].uso = true;
         Memoria->marcos[marco].ult_usado = Memoria->time_count++;
@@ -484,7 +487,9 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int dir_logica, int 
         return QI_ERR_STORAGE;
     }
 
-    char* buffer = malloc(tamanio + 1);
+    int longitud_real = ((tamanio + tam_pagina - 1) / tam_pagina) * tam_pagina;
+
+    char* buffer = calloc(longitud_real, 1);
     int bytes_restantes = tamanio;
     int cursor_logico = dir_logica;
     int pos_buf = 0;
@@ -508,7 +513,6 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int dir_logica, int 
         cursor_logico += a_leer;
         pos_buf += a_leer;
     }
-    buffer[tamanio] = '\0';
 
     t_paquete* paquete = crear_paquete(OP_READ);
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);

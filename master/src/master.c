@@ -597,6 +597,8 @@ void *hilo_aging(void *arg) {
         if (tiempo_aging_ms <= 0) {
             // no hay tiempo configurado
             // usleep(1000 * 100); ¿??
+            usleep(1000 * 1000);
+            destrabar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging);
             continue;
         }
 
@@ -678,10 +680,13 @@ void planificador_prioridades() {
         }
         // no hubo desalojo. Hacer esto con el flag global esta mal... pero no taaan mal.
         //Por lo menos evitamos espera activa por definicion, peeeero igualmente va a correr el plani cada vuelta del while(1) de aging
-        else { 
+        else if(!tiempo_aging_ms){ 
             encolar_query(cola_ready_queries, q, -1);
             esperar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging); // espero al aging
             trabar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging); // reinicio el flag
+            continue;
+        }else {
+            encolar_query(cola_ready_queries, q, -1);
             continue;
         }
         

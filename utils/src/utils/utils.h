@@ -193,4 +193,5 @@ extern t_log* logger;
     void esperar_flag_global(int *flag, pthread_mutex_t *mutex, pthread_cond_t *cond);
     char* string_array_to_string(char** array);
     char *error_storage_string(protocolo_socket *error);
+    void print_chars(void *ptr, size_t length);
 #endif
