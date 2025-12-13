@@ -117,6 +117,8 @@ void inicializarEstructurasMaster(){
     flag_global_aging = false;
     cond_global_aging = inicializarCond();
     mutex_global_aging = inicializarMutex();
+
+    trabar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging);
 }
 
 void aumentar_nivel_multiprocesamiento(){
@@ -379,9 +381,10 @@ static query_t *obtener_peor_query_exec(void) {
     }
 
     int indice_peor = 0;
-    query_t *peor_query = NULL;
+    query_t *peor_query = list_get(cola_exec_queries->lista, 0);
     query_t *q_aux;
-    t_list_iterator * iterator = list_iterator_create(cola_ready_queries->lista);
+    t_list_iterator * iterator = list_iterator_create(cola_exec_queries->lista);
+
     while (list_iterator_has_next(iterator)){
         q_aux = list_iterator_next(iterator);
         if (q_aux->prioridad > peor_query->prioridad) {
@@ -389,9 +392,9 @@ static query_t *obtener_peor_query_exec(void) {
             indice_peor = list_iterator_index(iterator);
         }
     }
-    if (peor_query!=NULL){
-        log_debug(logger, "Peor Query en EXEC: id <%d> prioridad <%d> (indice %d)", peor_query->id_query, peor_query->prioridad, indice_peor);
-    }
+    // if (peor_query!=NULL){
+    //     log_debug(logger, "Peor Query en EXEC: id <%d> prioridad <%d> (indice %d)", peor_query->id_query, peor_query->prioridad, indice_peor);
+    // }
 
     pthread_mutex_unlock(cola_exec_queries->mutex);
     return peor_query;
@@ -665,7 +668,7 @@ static query_t *sacar_mejor_query_ready(void) {
 void planificador_prioridades() {
     while (1) {
         // espero hasta tener un W libre y una Q en READY
-        sem_wait(workers_libres->sem);
+        log_debug(logger, "VUELTA PLANIFICADOR");
         sem_wait(cola_ready_queries->sem);
 
         query_t *q = sacar_mejor_query_ready(); // numero mas chico=mejor prioridad
@@ -680,13 +683,10 @@ void planificador_prioridades() {
         }
         // no hubo desalojo. Hacer esto con el flag global esta mal... pero no taaan mal.
         //Por lo menos evitamos espera activa por definicion, peeeero igualmente va a correr el plani cada vuelta del while(1) de aging
-        else if(!tiempo_aging_ms){ 
+        else{ 
             encolar_query(cola_ready_queries, q, -1);
             esperar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging); // espero al aging
             trabar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging); // reinicio el flag
-            continue;
-        }else {
-            encolar_query(cola_ready_queries, q, -1);
             continue;
         }
         

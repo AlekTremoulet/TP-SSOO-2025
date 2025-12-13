@@ -124,6 +124,17 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo
     char * metadata_config_asociado = malloc(strlen(dir_files) + strlen(archivo) + strlen(tag) + 1 + 20);
     sprintf(metadata_config_asociado, "%s/%s/%s/metadata.config", dir_files, archivo, tag);
 
+    char * dir_tag = malloc (strlen(dir_files)+ 1 + strlen(archivo) +1 + strlen(tag) + 1);
+    sprintf(dir_tag, "%s/%s/%s", dir_files, archivo, tag);
+
+    DIR * dir = opendir(dir_tag);
+
+    if(!dir){
+        log_error(logger, "Error, no se puede truncar el archivo porque no existe la ruta del tag");
+        *error = ERR_TAG_INEXISTENTE;
+        return;
+    }
+
     t_config *config_a_truncar = config_create(metadata_config_asociado);
     int tamanio_actual = config_get_int_value(config_a_truncar, "Tamanio");
     char *estado_actual = config_get_string_value(config_a_truncar, "ESTADO");
