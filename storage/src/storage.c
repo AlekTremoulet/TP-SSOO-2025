@@ -15,19 +15,24 @@ int main(int argc, char* argv[]) {
     if (strcmp(fresh_start, "TRUE") == 0){
         borrar_directorio(punto_montaje);
         crear_directorio(punto_montaje);
+        crear_directorio(dir_files);
+        crear_directorio(dir_physical_blocks);
+        levantarConfigSuperblock();
+        inicializar_bitmap();
+        inicializar_hash();
+        inicializar_bloques_logicos();
+        for (int i = 0; i < block_count; i++) {
+            inicializar_bloque_fisico(i);
+        }
     }else{
         crear_directorio(punto_montaje);
+        crear_directorio(dir_files);
+        crear_directorio(dir_physical_blocks);
+        levantarConfigSuperblock();
+        path_bitmap = cargar_ruta("bitmap.bin");
+        inicializar_hash();
     }
-    crear_directorio(dir_files);
-    crear_directorio(dir_physical_blocks);
 
-    levantarConfigSuperblock();
-    inicializar_bitmap();
-    inicializar_hash();
-    inicializar_bloques_logicos();
-    for (int i = 0; i < block_count; i++) {
-        inicializar_bloque_fisico(i);
-    }
     
     pthread_create(&tid_server_mh_worker, NULL, server_mh_worker, NULL);
     pthread_join(tid_server_mh_worker, NULL);
