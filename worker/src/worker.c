@@ -5,6 +5,7 @@ extern char * query_path;
 extern int program_counter;
 sem_t * sem_hay_query;
 sem_t * sem_desalojo_waiter;
+sem_t * sem_flush_finalizado;
 list_struct_t * lista_queries;
 pthread_mutex_t * mutex_query_id;
 
@@ -39,6 +40,7 @@ void inicializarWorker(){
 
     sem_hay_query = inicializarSem(0);
     sem_desalojo_waiter = inicializarSem(0);
+    sem_flush_finalizado = inicializarSem(1);
 
     mutex_query_id = inicializarMutex();
 
@@ -134,6 +136,7 @@ void *conexion_cliente_master(void *args){
         switch (cod_op)
         {
         case EXEC_QUERY:
+            sem_wait(sem_flush_finalizado);
             paquete_recv = recibir_paquete(socket_master);
             //hay que crear una global o guardarlo en algun lado
             setear_query_id(*(int *) list_remove(paquete_recv, 0));

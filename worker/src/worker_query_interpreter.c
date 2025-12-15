@@ -5,6 +5,7 @@ int block_size = 0;
 int mem_delay_ms = 0;
 extern int socket_master;
 extern sem_t * sem_desalojo_waiter;
+extern sem_t * sem_flush_finalizado;
 
 extern char * ip_storage, *puerto_storage;
 extern int socket_master;
@@ -238,6 +239,7 @@ void loop_principal(){
         if (obtener_desalojo_flag()){
 
             memoria_flush_global(QI_OK);
+            sem_post(sem_flush_finalizado);
             sem_wait(sem_desalojo_waiter);
 
             setear_desalojo_flag(false);
@@ -248,6 +250,7 @@ void loop_principal(){
                 sem_post(sem_hay_query);
             }else {
                 memoria_flush_global(status);
+                sem_post(sem_flush_finalizado);
             }
         }  
     }
