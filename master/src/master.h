@@ -17,6 +17,7 @@ typedef struct {
     int id;
     int socket_worker;   // socket del Worker para mandarle la tarea al Worker: path + id_query
     int query_id;
+    sem_t * desalojo_completado;
 } worker_t;
 
 // los datos que necesito pasarle al thread

@@ -230,22 +230,28 @@ void setear_desalojo_flag(int value){
 void loop_principal(){
     protocolo_socket cod_op;
     int flag_fin_query = false;
+    qi_status_t status;
 
     mutex_flag_desalojo = inicializarMutex();
 
     //hay que modificar ejecutar query para que corra de a una linea, dandonos la oporturnidad de chequear si hay desalojo desde master
     while(1){
-        sem_wait(sem_hay_query);
+        
         if (obtener_desalojo_flag()){
 
-            memoria_flush_global(QI_OK);
-            sem_post(sem_flush_finalizado);
-            sem_wait(sem_desalojo_waiter);
+            if(status != QI_END){
+                memoria_flush_global(QI_OK);
+                
+                t_paquete * paquete_send = crear_paquete(DESALOJO);
+                agregar_a_paquete(paquete_send, &program_counter, sizeof(int));
 
+                enviar_paquete(paquete_send, socket_master);
+            }
             setear_desalojo_flag(false);
 
         }else {
-            qi_status_t status = ejecutar_query(query_path);
+            sem_wait(sem_hay_query);
+            status = ejecutar_query(query_path);
             if (!status){
                 sem_post(sem_hay_query);
             }else {

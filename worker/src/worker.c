@@ -24,6 +24,12 @@ int main(int argc, char* argv[]) {
     archivo_config = argv[1];
     id_worker = atoi(argv[2]);
 
+    char * loggerFile = malloc (strlen(archivo_config) + strlen(".log")+1);
+
+    sprintf(loggerFile, "%s.log", archivo_config);
+    
+    logger = log_create(loggerFile, "WORKER", 1, current_log_level);
+
     levantarStorage();
     levantarConfig(archivo_config);
     inicializarWorker();
@@ -31,8 +37,8 @@ int main(int argc, char* argv[]) {
 }
 
 void inicializarWorker(){
+
     
-    logger = log_create("worker.log", "WORKER", 1, current_log_level);
 
     pthread_t tid_conexion_master;
     pthread_t tid_conexion_storage;
@@ -143,6 +149,8 @@ void *conexion_cliente_master(void *args){
             query_path = list_remove(paquete_recv, 0);
             program_counter = *(int *) list_remove(paquete_recv, 0);
 
+            list_destroy_and_destroy_elements(paquete_recv, free);
+
             //aca guardamos el query entero en una t_list
 
             pthread_mutex_lock(lista_queries->mutex);
@@ -196,17 +204,15 @@ void *conexion_cliente_master(void *args){
 
             setear_desalojo_flag(true);
 
-            t_paquete * paquete_send = crear_paquete(DESALOJO);
-            agregar_a_paquete(paquete_send, &program_counter, sizeof(int));
+            t_list * paquete;
+            paquete = recibir_paquete(socket_master);
 
-            enviar_paquete(paquete_send, socket_master);
+            list_destroy_and_destroy_elements(paquete, free);
 
-            setear_desalojo_flag(false);
-            sem_post(sem_desalojo_waiter);
             break;
 
         default:
-            log_error(logger, "Codigo de operacion inesperado en handler_worker");
+            log_error(logger, "Codigo de operacion inesperado en handler_worker %d", cod_op);
 
         }
     }

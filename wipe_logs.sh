@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rm ./master/master.log
-rm ./query_control/query.log
-rm ./worker/worker.log
-rm ./storage/storage.log
+rm -r ./master/*.log
+rm -r ./query_control/*.log
+rm -r ./worker/*.log
+rm -r ./storage/*.log

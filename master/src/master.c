@@ -239,6 +239,7 @@ void *handler_cliente(void *arg) {
             worker_t *w = malloc(sizeof(worker_t));
             w->id            = worker_id;
             w->socket_worker = socket_nuevo;       // guardo la conexion al worker
+            w->desalojo_completado = inicializarSem(0);
 
             w->query_id = -1; // inicializo el w
 
@@ -565,7 +566,6 @@ void *hilo_worker_query(void *arg) {
                 // reencolo el worker como libre
                 encolar_worker(workers_libres, w, -1);
 
-                sem_post(sem_desalojo_completado);
 
                 free(dwq);
 
@@ -678,7 +678,6 @@ void planificador_prioridades() {
         if(status == 0){ // Hay workers libres
             w = desencolar_worker(workers_libres, 0);
         }else if (status == 1){ // hubo desalojo
-            sem_wait(sem_desalojo_completado);
             w = desencolar_worker(workers_libres, 0);
         }
         // no hubo desalojo. Hacer esto con el flag global esta mal... pero no taaan mal.
@@ -761,8 +760,11 @@ static int posible_desalojo(query_t *q_nueva) {
     log_info(logger, "Se desaloja la Query <%d> del Worker <%d> para ejecutar la nueva Query <%d> (prio mejor).", peor->id_query, w_a_desalojar->id, q_nueva->id_query);
 
     t_paquete *paquete_desalojo = crear_paquete(DESALOJO);
+    agregar_a_paquete(paquete_desalojo, "desalojo", strlen("desalojo"+1));
     enviar_paquete(paquete_desalojo, w_a_desalojar->socket_worker);
     eliminar_paquete(paquete_desalojo);
+
+    usleep(1000*1000);
 
     return 1;
 }
