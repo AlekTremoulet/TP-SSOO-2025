@@ -736,21 +736,21 @@ static int posible_desalojo(query_t *q_nueva) {
 
     // si hay un w libre no desalojo
     if (hay_workers_libres()) {
-        log_info(logger, "Q <%d> (prio %d). Hay workers libres", q_nueva->id_query, q_nueva->prioridad);
+        log_debug(logger, "Q <%d> (prio %d). Hay workers libres", q_nueva->id_query, q_nueva->prioridad);
         return 0;
     }
 
     query_t *peor = obtener_peor_query_exec();
 
     if (peor == NULL) {
-        log_info(logger, "Q <%d> (prio %d). EXEC vacio, no hay desalojo.",  q_nueva->id_query, q_nueva->prioridad);
+        log_debug(logger, "Q <%d> (prio %d). EXEC vacio, no hay desalojo.",  q_nueva->id_query, q_nueva->prioridad);
         return 2;
     }
-    log_info(logger, "Llego query a ready: <%d> (prio %d). La peor query en exec es: <%d> (prio %d).", q_nueva->id_query, q_nueva->prioridad, peor->id_query, peor->prioridad);
+    log_debug(logger, "Llego query a ready: <%d> (prio %d). La peor query en exec es: <%d> (prio %d).", q_nueva->id_query, q_nueva->prioridad, peor->id_query, peor->prioridad);
 
     // si la nueva no es mejor que la peor en exec (menor numero = mejor prioridad)
     if (q_nueva->prioridad >= peor->prioridad) {
-        log_info(logger, "La Query <%d> no mejora la prioridad de la peor en EXEC. No se desaloja.", q_nueva->id_query);
+        log_debug(logger, "La Query <%d> no mejora la prioridad de la peor en EXEC. No se desaloja.", q_nueva->id_query);
         return 2;
     }
 
@@ -760,8 +760,6 @@ static int posible_desalojo(query_t *q_nueva) {
         log_error(logger, "No hay Worker que ejecute la Query <%d> para desalojar. Hay un query en exec incorrectamente", peor->id_query);
         return 2;
     }
-
-    log_info(logger, "Se desaloja la Query <%d> del Worker <%d> para ejecutar la nueva Query <%d> (prio mejor).", peor->id_query, w_a_desalojar->id, q_nueva->id_query);
 
     t_paquete *paquete_desalojo = crear_paquete(DESALOJO);
     agregar_a_paquete(paquete_desalojo, "desalojo", strlen("desalojo"+1));

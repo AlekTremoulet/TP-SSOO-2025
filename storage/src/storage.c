@@ -314,19 +314,19 @@ void inicializar_bitmap() {
     if (!bitmap_file) {
         bitmap_file = fopen(path_bitmap, "wb+");
         if (!bitmap_file) {
-            log_info(logger, "Error al crear el archivo bitmap.bin");
+            log_error(logger, "Error al crear el archivo bitmap.bin");
             free(path_bitmap);
             exit(EXIT_FAILURE);
         }
         uint8_t* buffer = calloc(tamanio_bitmap, sizeof(uint8_t));
         if (!buffer) {
-            log_info(logger, "Error al asignar memoria para el buffer inicial.");
+            log_error(logger, "Error al asignar memoria para el buffer inicial.");
             fclose(bitmap_file);
             free(path_bitmap);
             exit(EXIT_FAILURE);
         }
         if (fwrite(buffer, sizeof(uint8_t), tamanio_bitmap, bitmap_file) != tamanio_bitmap) {
-            log_info(logger, "Error al escribir en el archivo bitmap.bin");
+            log_error(logger, "Error al escribir en el archivo bitmap.bin");
             free(buffer);
             fclose(bitmap_file);
             free(path_bitmap);
@@ -338,14 +338,14 @@ void inicializar_bitmap() {
 
     uint8_t* contenido_bitmap = malloc(tamanio_bitmap);
     if (!contenido_bitmap) {
-        log_info(logger, "Error al asignar memoria para contenido_bitmap");
+        log_error(logger, "Error al asignar memoria para contenido_bitmap");
         fclose(bitmap_file);
         free(path_bitmap);
         exit(EXIT_FAILURE);
     }
     rewind(bitmap_file);
     if (fread(contenido_bitmap, sizeof(uint8_t), tamanio_bitmap, bitmap_file) != tamanio_bitmap) {
-        log_info(logger, "Error al leer el archivo bitmap.bin");
+        log_error(logger, "Error al leer el archivo bitmap.bin");
         free(contenido_bitmap);
         fclose(bitmap_file);
         free(path_bitmap);
@@ -355,7 +355,7 @@ void inicializar_bitmap() {
 
     bitmap = bitarray_create_with_mode((char*)contenido_bitmap, tamanio_bitmap, LSB_FIRST);
     if (!bitmap) {
-        log_info(logger, "Error al inicializar el bitmap.");
+        log_error(logger, "Error al inicializar el bitmap.");
         free(contenido_bitmap);
         fclose(bitmap_file);
         free(path_bitmap);

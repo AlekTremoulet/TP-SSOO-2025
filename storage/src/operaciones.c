@@ -18,14 +18,14 @@ char * crear_archivo_en_FS(char *nombre_archivo, char *tag_archivo) {
 
     char* directorio_base = crear_directorio(archivo.ruta_base);
     char* directorio_tag = crear_directorio(archivo.ruta_tag);
-    log_info(logger,"La ruta base de %s es %s",archivo.nombre,archivo.ruta_base);
-    log_info(logger,"La ruta al tag es%s ",archivo.ruta_tag);
+    log_debug(logger,"La ruta base de %s es %s",archivo.nombre,archivo.ruta_base);
+    log_debug(logger,"La ruta al tag es%s ",archivo.ruta_tag);
 
     char *config_asociada = malloc(strlen(directorio_tag) + strlen("/metadata.config") + 1); //NO SE DONDE IRIA UN FREE
     sprintf(config_asociada, "%s/%s", directorio_tag,"metadata.config");
 
     char *directorio_config_asociada = cargar_archivo("",config_asociada);
-    log_info(logger,"directorio_config_asociada %s ",directorio_config_asociada);
+    log_debug(logger,"directorio_config_asociada %s ",directorio_config_asociada);
 
 
 
@@ -67,7 +67,7 @@ char *cargar_archivo(char * ruta_base ,char *ruta_al_archivo){
     size_t path_length = strlen(ruta_base) + strlen(ruta_al_archivo) + 2;
     char *path_creado = malloc(path_length);
     if (!path_creado) {
-        log_info(logger, "Error: No se pudo asignar memoria para crear el archivo");
+        log_error(logger, "Error: No se pudo asignar memoria para crear el archivo");
         exit(EXIT_FAILURE);
     }
     
@@ -114,7 +114,7 @@ void Crear_file(char* archivo,char* tag, int query_id, protocolo_socket * error)
         log_error(logger,"Error al crear el archivo");
         *error = ERR_FILE_PREEXISTENTE;
     } else {
-        log_info(logger,"<%d> - File Creado <%s>:<%s>",query_id,archivo,tag);
+        log_info(logger,"## <%d> - File Creado <%s>:<%s>",query_id,archivo,tag);
     }
 }; 
 
@@ -187,7 +187,7 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo
                 
                 link(bloque_archivo, logical_blocks_archivo_tagi);
                 
-                log_info(logger, "<%d> - <%s>:<%s> Se agregó el hard link del bloque lógico <%s> al bloque físico <%s>", query_id, archivo, tag, logical_blocks_archivo_tagi, bloque_archivo);
+                log_info(logger, "## <%d> - <%s>:<%s> Se agregó el hard link del bloque lógico <%s> al bloque físico <%s>", query_id, archivo, tag, logical_blocks_archivo_tagi, bloque_archivo);
                 
                 free(logical_blocks_archivo_tagi);
                 free(bloque_archivo);
@@ -218,7 +218,7 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo
                     sprintf(logical_blocks_archivo_tagi, "%s/logical_blocks/%06d.dat", archivo_tag, i); 
                     
                     unlink(logical_blocks_archivo_tagi);
-                    log_info(logger, "<%d> - Borrando hard link lógico: %s", query_id, logical_blocks_archivo_tagi);
+                    log_info(logger, "## <%d> - Borrando hard link lógico: %s", query_id, logical_blocks_archivo_tagi);
                     free(logical_blocks_archivo_tagi);
                     char* bloque_fisico_path = malloc(strlen(dir_physical_blocks) + 20);
                     sprintf(bloque_fisico_path, "%s/block%04d.dat", dir_physical_blocks, bloque_id);
@@ -227,9 +227,9 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo
                     if (stat(bloque_fisico_path, &st) == 0) {
                         if (st.st_nlink == 1) {
                             bitarray_clean_bit(bitmap, bloque_id);
-                            log_info(logger, "<%d> - Bloque Liberado (Nlink=1): %d", query_id, bloque_id);
+                            log_info(logger, "## <%d> - Bloque Liberado (Nlink=1): %d", query_id, bloque_id);
                         } else {
-                            log_info(logger, "<%d> - Bloque NO Liberado (Compartido):l %d", query_id, bloque_id);
+                            log_debug(logger, "<%d> - Bloque NO Liberado (Compartido):l %d", query_id, bloque_id);
                         }
                     }
                     free(bloque_fisico_path);
@@ -247,7 +247,7 @@ void Truncar_file(char* archivo, char* tag, int tamanio, int query_id, protocolo
         config_destroy(config_a_truncar); 
         free(metadata_config_asociado);   
 
-        log_info(logger, "<%d> - File Truncado <%s>:<%s> - Tamaño: <%d>", query_id, archivo, tag, tamanio);
+        log_info(logger, "## <%d> - File Truncado <%s>:<%s> - Tamaño: <%d>", query_id, archivo, tag, tamanio);
     }
 }
 
@@ -380,7 +380,7 @@ void Escrbir_bloque(char* archivo, char* tag, int num_bloque_Log, char* contenid
              *error = ERR_FILE_INEXISTENTE;
         }
 
-        log_info(logger,"<%d> - Bloque Lógico Escrito <%s>:<%s> - Número de Bloque Físico: <%d>", query_id, archivo, tag, bloque_final_escrito);
+        log_info(logger,"## <%d> - Bloque Lógico Escrito <%s>:<%s> - Número de Bloque Físico: <%d>", query_id, archivo, tag, bloque_final_escrito);
 
         string_iterate_lines(bloques_actuales, (void*) free);
         free(bloques_actuales);
@@ -526,7 +526,7 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, pr
         buffer_contenido[fsize] = '\0';
         
         fclose(f_bloque);
-        log_info(logger,"<%d> - Bloque Lógico Leído <%s>:<%s> - Número de Bloque Físico: <%d>", query_id, archivo, tag, bloque_fisico_actual);
+        log_info(logger,"## <%d> - Bloque Lógico Leído <%s>:<%s> - Número de Bloque Físico: <%d>", query_id, archivo, tag, bloque_fisico_actual);
         log_debug(logger,"Data: leida <%s>", buffer_contenido);
     } else {
         log_error(logger, "Error: No se pudo abrir el archivo físico %s", path_bloque_fisico);
@@ -585,7 +585,7 @@ void Crear_tag(char * Origen, char * Destino, char* tag_origen, char* tag_destin
     config_save(config_archivo);
     config_destroy(config_archivo);
     free(ruta_archivo);
-    log_info(logger,"<%d> - Tag Creado <%s>:<%s>", query_id, Destino, tag_destino);
+    log_info(logger,"## <%d> - Tag Creado <%s>:<%s>", query_id, Destino, tag_destino);
 };
 
 void Eliminar_tag(char * Origen, char* tag, int query_id, protocolo_socket * error){
@@ -631,7 +631,7 @@ void Eliminar_tag(char * Origen, char* tag, int query_id, protocolo_socket * err
         int resultado = system(comando);
 
         if (resultado == 0) {
-            log_info(logger,"<%d> - Tag Eliminado <%s>:<%s>", query_id, Origen, tag);
+            log_info(logger,"## <%d> - Tag Eliminado <%s>:<%s>", query_id, Origen, tag);
         } else {
             log_error(logger, "Error al eliminar el tag");
             *error = ERR_TAG_INEXISTENTE;
@@ -655,7 +655,7 @@ void Commit_tag(char* archivo, char* tag, int query_id, protocolo_socket * error
     if (config_has_property(config_archivo, "ESTADO")) {
         char *estado_actual = config_get_string_value(config_archivo, "ESTADO");
         if (strcmp(estado_actual, "COMMITED") == 0) {
-            log_info(logger, "<%d> - El Tag <%s>:<%s> ya está COMMITED. Fin.", query_id, archivo, tag);
+            log_error(logger, "<%d> - El Tag <%s>:<%s> ya está COMMITED. Fin.", query_id, archivo, tag);
             config_destroy(config_archivo);
             free(ruta_metadata);
             return;
@@ -693,7 +693,7 @@ void Commit_tag(char* archivo, char* tag, int query_id, protocolo_socket * error
                 
                 char *path_logico = string_from_format("%s/%s/%s/logical_blocks/%06d.dat", dir_files, archivo, tag, i);
 
-                log_info(logger, "<%d> - <%s>:<%s> Se eliminó el hard link del bloque lógico <%d> al bloque físico <%s>",
+                log_info(logger, "## <%d> - <%s>:<%s> Se eliminó el hard link del bloque lógico <%d> al bloque físico <%s>",
                         query_id, archivo, tag, i, nombre_fisico_actual);
 
                 unlink(path_logico);
@@ -704,7 +704,7 @@ void Commit_tag(char* archivo, char* tag, int query_id, protocolo_socket * error
 
                 liberar_espacio_bitmap(id_bloque_actual_int);
 
-                log_info(logger, "<%d> - <%s>:<%s> Bloque Lógico <%d> se reasigna de <%s> a <%s>",
+                log_info(logger, "## <%d> - <%s>:<%s> Bloque Lógico <%d> se reasigna de <%s> a <%s>",
                          query_id, archivo, tag, i, nombre_fisico_actual, nombre_fisico_preexistente);
 
 
@@ -737,7 +737,7 @@ void Commit_tag(char* archivo, char* tag, int query_id, protocolo_socket * error
 
     config_set_value(config_archivo, "ESTADO", "COMMITED");
     config_save(config_archivo);
-    log_info(logger, "<%d> - Commit de File:Tag %s:%s",query_id,archivo, tag);
+    log_info(logger, "## <%d> - Commit de File:Tag %s:%s",query_id,archivo, tag);
 
     string_array_destroy(bloques);
     config_destroy(hash_config);

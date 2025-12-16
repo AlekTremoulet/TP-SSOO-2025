@@ -14,6 +14,7 @@ int error_de_flush = false;
 extern int socket_storage;
 
 int obtener_query_id();
+void log_estado_marcos();
 
 void inicializar_memoria_interna(int tam_total, int tam_pagina_local){
     if (Memoria) 
@@ -60,7 +61,7 @@ void memoria_agregar_commit(const char* archivo, const char* tag) {
 
     list_add(filetag_commiteados, nuevo);
 
-    log_info(logger,"Memoria: agregando COMMIT para %s:%s", archivo, tag);
+    log_debug(logger,"Memoria: agregando COMMIT para %s:%s", archivo, tag);
 }
 
 void liberar_memoria_interna() {
@@ -388,7 +389,7 @@ void memoria_invalidar_file_tag_completo(const char* archivo, const char* tag) {
 
         }
     }
-    log_info(logger,"Memoria: invalidación total de %s:%s completada",archivo, tag);
+    log_debug(logger,"Memoria: invalidación total de %s:%s completada",archivo, tag);
 }
 
 
@@ -406,7 +407,7 @@ void memoria_eliminar_commit(const char* archivo, const char* tag) {
         }
         i++;
     }
-    log_info(logger, "Memoria: eliminado COMMIT %s:%s (si existía)", archivo, tag);
+    log_debug(logger, "Memoria: eliminado COMMIT %s:%s (si existía)", archivo, tag);
 }
 
 void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam)
@@ -443,7 +444,7 @@ void memoria_truncar(const char* archivo, const char* tag, int nuevo_tam)
             memset(p->data, 0, Memoria->tam_pagina);
         }
     }
-    log_info(logger, "Memoria: TRUNCATE finalizado para %s:%s, nuevo tamaño=%d",archivo, tag, nuevo_tam);
+    log_debug(logger, "Memoria: TRUNCATE finalizado para %s:%s, nuevo tamaño=%d",archivo, tag, nuevo_tam);
 }
 
 qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_logica,char * contenido){
@@ -549,12 +550,9 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int dir_logica, int 
         char* ptr_dato = (char*)Memoria->marcos[marco].data + offset;
        
         log_info(logger, 
-            "Lectura Memoria: Query %d: Acción: LEER - Dirección Física: %d - Contenido leído: %.*s", 
+            "## Query %d: Acción: LEER - Dirección Física: %d - Contenido leído: %.*s", 
             obtener_query_id(), direccion_fisica, a_leer,ptr_dato );
 
-        //log_info(logger,
-        //"Lectura Memoria: Query %d: Acción: LEER - Dirección Física: %d - Valor: %c", obtener_query_id(), 
-        //direccion_fisica,valor);
     }
     
 
