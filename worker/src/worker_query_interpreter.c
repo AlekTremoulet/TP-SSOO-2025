@@ -239,13 +239,17 @@ void loop_principal(){
         
         if (obtener_desalojo_flag()){
 
+            log_info(logger, "## Query <%d>: Desalojada por pedido del Master", obtener_query_id());
+
             if(status != QI_END){
                 memoria_flush_global(QI_OK);
+                sem_post(sem_flush_finalizado);
                 
                 t_paquete * paquete_send = crear_paquete(DESALOJO);
                 agregar_a_paquete(paquete_send, &program_counter, sizeof(int));
 
                 enviar_paquete(paquete_send, socket_master);
+                sem_wait(sem_hay_query);
             }
             setear_desalojo_flag(false);
 

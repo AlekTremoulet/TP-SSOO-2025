@@ -43,6 +43,10 @@ int main(int argc, char* argv[]) {
 
     inicializarEstructurasMaster();
 
+    pthread_create(&tid_server_mh, NULL, server_mh, NULL);
+
+    usleep(1000*1000); // aguanto 1 segundo antes de arrancar el aging y planificador, para evitar problemas en desalojo
+
     // AGING
     if (!strcmp(algo_planificacion, "PRIORIDADES") && tiempo_aging_ms > 0) {
         pthread_t tid_aging;
@@ -56,7 +60,6 @@ int main(int argc, char* argv[]) {
     pthread_detach(tid_planificador); // pthread_detach =  el hilo se auto-limpia cuando termina
     // (como el planificador corre para siempre y nunca se lo va a esperar con join, se detacha y listo)
 
-    pthread_create(&tid_server_mh, NULL, server_mh, NULL);
     pthread_join(tid_server_mh, NULL);
 
     log_destroy(logger);
@@ -470,7 +473,7 @@ void *hilo_worker_query(void *arg) {
 
     w->query_id = q->id_query; // este w ejecuta esta q
 
-    log_info(logger, "## Se envía la Query <%d> (PRIORIDAD <%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
+    log_info(logger, "## Se envia la Query <%d> (PRIORIDAD <%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
 
     // le mando al W el path + id_query
     t_paquete *p = crear_paquete(EXEC_QUERY);
@@ -676,13 +679,16 @@ void planificador_prioridades() {
 
         int status = posible_desalojo(q);
         if(status == 0){ // Hay workers libres
+            log_debug(logger, "habia worker libre -> desencolando worker libre");
             w = desencolar_worker(workers_libres, 0);
         }else if (status == 1){ // hubo desalojo
+            log_debug(logger, "hubo desalojo -> desencolando worker libre");
             w = desencolar_worker(workers_libres, 0);
         }
         // no hubo desalojo. Hacer esto con el flag global esta mal... pero no taaan mal.
         //Por lo menos evitamos espera activa por definicion, peeeero igualmente va a correr el plani cada vuelta del while(1) de aging
         else{ 
+            log_debug(logger, "no hubo desalojo, y no habia worker libre");
             encolar_query(cola_ready_queries, q, -1);
             esperar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging); // espero al aging
             trabar_flag_global(&flag_global_aging, mutex_global_aging, cond_global_aging); // reinicio el flag
@@ -711,8 +717,6 @@ void planificador_prioridades() {
         encolar_worker(workers_busy, w, -1);
         log_debug(logger, "Worker %d se encola en lista busy", w->id);
 
-
-        log_info(logger, "PRIORIDADES: Se envía la Query <%d> (PRIORIDAD <%d>) al Worker <%d>", q->id_query, q->prioridad, w->id);
 
         // creo hilo worker+query
         pthread_t th_wq;
@@ -764,7 +768,7 @@ static int posible_desalojo(query_t *q_nueva) {
     enviar_paquete(paquete_desalojo, w_a_desalojar->socket_worker);
     eliminar_paquete(paquete_desalojo);
 
-    usleep(1000*1000);
+    usleep(1000*400);
 
     return 1;
 }
