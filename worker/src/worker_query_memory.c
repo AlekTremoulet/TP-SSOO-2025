@@ -102,7 +102,7 @@ static inline int offset_en_pagina(int direccion) {
 
 static int buscar_marco_por_pagina(const char* archivo, const char* tag, int nro_pagina) {
     log_debug(logger,"Buscando página %d de %s:%s",nro_pagina, archivo, tag);
-    log_estado_marcos();
+
     for (int i = 0; i < Memoria->cant_marcos; i++) {
 
         if (Memoria->marcos[i].presente &&
@@ -127,28 +127,38 @@ static int buscar_marco_libre() {
 static int seleccionar_victima_CLOCK_M() {
     int n = Memoria->cant_marcos;
 
-    while (true) {
-        t_pagina* f = &Memoria->marcos[Memoria->clock_puntero];
+    while (1) {
 
-        if (!f->uso && !f->modificado) {
+        // ===== Primera pasada: (U=0, M=0) =====
+        for (int i = 0; i < n; i++) {
             int victima = Memoria->clock_puntero;
+            t_pagina* f = &Memoria->marcos[victima];
+            if (!f->uso && !f->modificado) {
+                Memoria->clock_puntero = (victima + 1) % n;
+                return victima;
+            }
             Memoria->clock_puntero = (victima + 1) % n;
-            return victima;
         }
-
-        if (!f->uso && f->modificado) {
+        // ===== Segunda pasada: (U=0, M=1) + limpiar U =====
+        for (int i = 0; i < n; i++) {
             int victima = Memoria->clock_puntero;
-            Memoria->clock_puntero = (victima + 1) % n;
-            return victima;
-        }
+            t_pagina* f = &Memoria->marcos[victima];
 
-        if (f->uso) {
+            if (!f->uso && f->modificado) {
+                Memoria->clock_puntero = (victima + 1) % n;
+                return victima;
+            }
             f->uso = false;
+            Memoria->clock_puntero = (victima + 1) % n;
         }
 
-        Memoria->clock_puntero = (Memoria->clock_puntero + 1) % n;
+        // Si llegamos acá:
+        // - todos eran (1,1)
+        // - quedaron como (0,1)
+        // - en la próxima iteración se va a elegir el primero (0,1)
     }
 }
+
 
 
 static int seleccionar_victima_LRU() { 
@@ -312,6 +322,7 @@ static bool asegurar_paginas_cargadas(const char* archivo, const char* tag, int 
 }
 
 static int obtener_marco(const char* archivo,const char* tag,int nro_pagina,bool acciones_escritura) {
+    log_estado_marcos();
     int marco = buscar_marco_por_pagina(archivo, tag, nro_pagina);
     if (marco != -1) {
         Memoria->marcos[marco].uso = true;
@@ -511,7 +522,7 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int dir_logica, int 
     while (bytes_restantes > 0) {
         int pagina = direccion_a_pagina(cursor_logico);
         int offset = offset_en_pagina(cursor_logico);
-
+        
         int marco = obtener_marco(archivo, tag, pagina,false);
         if (marco < 0) {
             free(buffer);
@@ -634,7 +645,7 @@ void log_estado_marcos() {
             i,
             m->archivo ? m->archivo : "-",
             m->tag ? m->tag : "-",
-            m->presente ? m->nro_pag_logica : "-",
+            m->presente ? m->nro_pag_logica : -1,
             m->modificado ? "SI" : "NO",
             m->uso ? 1 : 0,
             obtener_query_id()
