@@ -98,12 +98,15 @@ static inline int offset_en_pagina(int direccion) {
     return direccion % Memoria->tam_pagina;
 }
 
+
+
 static int buscar_marco_por_pagina(const char* archivo, const char* tag, int nro_pagina) {
+    log_debug(logger,"Buscando página %d de %s:%s",nro_pagina, archivo, tag);
+
     for (int i = 0; i < Memoria->cant_marcos; i++) {
+
         if (Memoria->marcos[i].presente &&
             Memoria->marcos[i].nro_pag_logica == nro_pagina &&
-            Memoria->marcos[i].archivo &&
-            Memoria->marcos[i].tag &&
             strcmp(Memoria->marcos[i].archivo, archivo) == 0 &&
             strcmp(Memoria->marcos[i].tag, tag) == 0) {
                 return i;
@@ -124,36 +127,40 @@ static int buscar_marco_libre() {
 static int seleccionar_victima_CLOCK_M() {
     int n = Memoria->cant_marcos;
 
-    // Primera pasada: buscar (uso=0, modificado=0)
-    for (int i = 0; i < n; i++) {
-        int victima = (Memoria->clock_puntero + i) % n;
-        t_pagina* frame = &Memoria->marcos[victima];
+    while (1) {
 
-        if (!frame->uso && !frame->modificado) {
+        // ===== Primera pasada: (U=0, M=0) =====
+        for (int i = 0; i < n; i++) {
+            int victima = Memoria->clock_puntero;
+            t_pagina* f = &Memoria->marcos[victima];
+            if (!f->uso && !f->modificado) {
+                Memoria->clock_puntero = (victima + 1) % n;
+                return victima;
+            }
             Memoria->clock_puntero = (victima + 1) % n;
-            return victima;
         }
-    }
-    // Segunda pasada: buscar (uso=0, modificado=1) 
+        // ===== Segunda pasada: (U=0, M=1) + limpiar U =====
+        for (int i = 0; i < n; i++) {
+            int victima = Memoria->clock_puntero;
+            t_pagina* f = &Memoria->marcos[victima];
 
-    for (int i = 0; i < n; i++) {
-        int victima = (Memoria->clock_puntero + i) % n;
-        t_pagina* frame = &Memoria->marcos[victima];
-
-        if (!frame->uso && frame->modificado) {
-            // muevo el puntero
+            if (!f->uso && f->modificado) {
+                Memoria->clock_puntero = (victima + 1) % n;
+                return victima;
+            }
+            f->uso = false;
             Memoria->clock_puntero = (victima + 1) % n;
-            return victima;
-        } else {
-            // Los demás se les baja el uso
-            frame->uso = false;
         }
-    }
 
-    // Si después de limpiar todos los bits de uso no encontramos víctima,
-    // significa que al reiniciar el algoritmo ahora sí encontraremos alguna.
-    return seleccionar_victima_CLOCK_M();
+        // Si llegamos acá:
+        // - todos eran (1,1)
+        // - quedaron como (0,1)
+        // - en la próxima iteración se va a elegir el primero (0,1)
+    }
 }
+
+
+
 static int seleccionar_victima_LRU() { 
     int min = 0;
     int min_timpo = Memoria->marcos[0].ult_usado;
@@ -170,10 +177,9 @@ int seleccionar_victima(){
     int marco = 0;
     if (strcmp(Algorit_Remplazo, "LRU") == 0) 
         marco = seleccionar_victima_LRU();
-    else 
+    else if (strcmp(Algorit_Remplazo, "CLOCK-M") == 0) 
         marco = seleccionar_victima_CLOCK_M();
     return marco;
-    
 }
 
 // escribe un marco en Storage si esta modificado 
@@ -212,9 +218,6 @@ static bool enviar_marco_a_storage(int marco) {
     }
 }
 static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
-    int existe = buscar_marco_por_pagina(archivo, tag, nro_pagina);
-    if (existe != -1) 
-        return existe;
 
     // buscar marco libre
     int libre = buscar_marco_libre();
@@ -237,7 +240,7 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
         Memoria->marcos[victima].nro_pag_logica = -1;
         Memoria->marcos[victima].uso = false;
         Memoria->marcos[victima].modificado = false;
-        memset(Memoria->marcos[victima].data, 0, Memoria->tam_pagina);
+        //memset(Memoria->marcos[victima].data, 0, Memoria->tam_pagina);
         libre = victima;
     }
 
@@ -258,6 +261,7 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     if(cod_op == OP_READ){
         t_list* paquete_recv = recibir_paquete(socket_storage);
         buffer = list_remove(paquete_recv,0);
+        //list_destroy(paquete_recv);//no lo se rick
         if (!buffer) {
             log_error(logger, "Error recibiendo pagina %d de %s:%s desde Storage", nro_pagina, archivo, tag);
             if (buffer) 
@@ -269,7 +273,8 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
         t_list * paquete_recv = recibir_paquete(socket_storage);
         char * motivo = list_remove(paquete_recv, 0);
         enviar_error_a_master(WORKER_FINALIZACION,motivo);
-        return QI_ERR_STORAGE;
+        //list_destroy(paquete_recv);
+        return -1;
     }
    
     // Copiar al marco
@@ -284,9 +289,10 @@ static int cargar_pagina_en_marco(char* archivo, char* tag, int nro_pagina) {
     Memoria->marcos[libre].uso = true;
     Memoria->marcos[libre].modificado = false;
     Memoria->marcos[libre].ult_usado = Memoria->time_count++;
+    //Memoria->marcos[libre].libre = false;//no lo se rick
     log_debug(logger, "Pagina %d de %s:%s cargada en marco %d", nro_pagina, archivo, tag, libre);
 
-    return 0;
+    return libre;
 }
 
 static bool asegurar_paginas_cargadas(const char* archivo, const char* tag, int direccion_base, int cantidad_bytes) {
@@ -315,6 +321,31 @@ static bool asegurar_paginas_cargadas(const char* archivo, const char* tag, int 
     return true;
 }
 
+static int obtener_marco(const char* archivo,const char* tag,int nro_pagina,bool acciones_escritura) {
+    log_estado_marcos();
+    int marco = buscar_marco_por_pagina(archivo, tag, nro_pagina);
+    if (marco != -1) {
+        Memoria->marcos[marco].uso = true;
+        Memoria->marcos[marco].ult_usado = Memoria->time_count++;
+         if (acciones_escritura) {
+            Memoria->marcos[marco].modificado = true;
+        }
+        return marco;
+    }
+
+    marco = cargar_pagina_en_marco((char*)archivo, (char*)tag, nro_pagina);
+    if (marco < 0)
+        return -1;
+
+    if (acciones_escritura) {
+        Memoria->marcos[marco].modificado = true;
+    }
+
+    if (Retardo_reemplazo > 0)
+        usleep(Retardo_reemplazo * 1000);
+    return marco;
+}
+   
 void memoria_actualizar_tag(char* arch_o, char* tag_o,char* arch_n, char* tag_n)
 {
     for (int i=0;i<Memoria->cant_marcos;i++) {
@@ -429,42 +460,39 @@ qi_status_t ejecutar_WRITE_memoria(char * archivo,char * tag,int dir_logica,char
         return QI_ERR_PARSE;
     }
 
-    if (!asegurar_paginas_cargadas(archivo, tag, dir_logica, longitud)) {
-        log_error(logger, "## Query %d: Error al obtener páginas necesarias desde Storage", obtener_query_id());
-        return QI_ERR_STORAGE;
-    }
-
-    // Escribir por partes en cada página
-    
-    int longitud_real = ((longitud + tam_pagina - 1) / tam_pagina) * tam_pagina;
     int bytes_restantes = longitud;
-    char *buffer = calloc(longitud_real, 1);
-    memcpy(buffer, contenido, longitud);
     int cursor_logico = dir_logica;
+    int pos_buf = 0;
+
     while (bytes_restantes > 0) {
-        int p = direccion_a_pagina(cursor_logico);
+        int pagina = direccion_a_pagina(cursor_logico);
         int offset = offset_en_pagina(cursor_logico);
-        int marco = buscar_marco_por_pagina(archivo, tag, p);
-        if (marco == -1) { 
-            log_error(logger, "Inconsistencia: pagina no cargada tras asegurar"); 
-            return QI_ERR_STORAGE; 
-            }
-        int espacio_en_pagina = Memoria->tam_pagina - offset;
-        int a_escribir = (bytes_restantes <= espacio_en_pagina) ? bytes_restantes : espacio_en_pagina;
-        memcpy((char*)Memoria->marcos[marco].data + offset, buffer + (longitud - bytes_restantes), a_escribir);
-        
-        Memoria->marcos[marco].modificado = true;
-        Memoria->marcos[marco].uso = true;
-        Memoria->marcos[marco].ult_usado = Memoria->time_count++;
+
+        int marco = obtener_marco(archivo, tag, pagina, true);
+        if (marco < 0) {
+            log_error(logger, "Error obteniendo marco para WRITE");
+            return QI_ERR_STORAGE;
+        }
+
+        int espacio = Memoria->tam_pagina - offset;
+        int a_escribir = bytes_restantes < espacio ? bytes_restantes : espacio;
+
+        memcpy((char*)Memoria->marcos[marco].data + offset,contenido + pos_buf,a_escribir);
+
+        //Memoria->marcos[marco].modificado = true;
+        //Memoria->marcos[marco].uso = true;
+        //Memoria->marcos[marco].ult_usado = Memoria->time_count++;
 
         bytes_restantes -= a_escribir;
         cursor_logico += a_escribir;
+        pos_buf += a_escribir;
     }
 
-    log_info(logger, "## Query %d: WRITE completado en memoria local (%s:%s)", obtener_query_id(), archivo, tag);
+    log_info(logger,"## Query %d: WRITE completado (%s:%s)", obtener_query_id(), archivo, tag
+    );
+    log_estado_marcos();
     return QI_OK;
 }
-
 
 
 qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int dir_logica, int tamanio) {
@@ -482,49 +510,64 @@ qi_status_t ejecutar_READ_memoria(char* archivo, char* tag, int dir_logica, int 
         return QI_ERR_PARSE;
     }
 
-    if (!asegurar_paginas_cargadas(archivo, tag, dir_logica, tamanio)) {
-        log_error(logger, "## Query %d: Error al obtener páginas necesarias desde Storage (READ)", obtener_query_id());
+    //int longitud_real = ((tamanio + tam_pagina - 1) / tam_pagina) * tam_pagina;
+    char* buffer = calloc(tamanio + 1, 1); 
+    if (!buffer)
         return QI_ERR_STORAGE;
-    }
 
-    int longitud_real = ((tamanio + tam_pagina - 1) / tam_pagina) * tam_pagina;
-
-    char* buffer = calloc(longitud_real, 1);
     int bytes_restantes = tamanio;
     int cursor_logico = dir_logica;
     int pos_buf = 0;
+
     while (bytes_restantes > 0) {
-        int p = direccion_a_pagina(cursor_logico);
+        int pagina = direccion_a_pagina(cursor_logico);
         int offset = offset_en_pagina(cursor_logico);
-        int marco = buscar_marco_por_pagina(archivo, tag, p);
-        if (marco == -1) { 
-            free(buffer); 
-            log_error(logger, "Inconsistencia en READ"); 
-            return QI_ERR_STORAGE; 
-            }
-        int espacio_en_pagina = Memoria->tam_pagina - offset;
-        int a_leer = (bytes_restantes <= espacio_en_pagina) ? bytes_restantes : espacio_en_pagina;
+        
+        int marco = obtener_marco(archivo, tag, pagina,false);
+        if (marco < 0) {
+            free(buffer);
+            log_error(logger, "Error obteniendo marco para READ");
+            return QI_ERR_STORAGE;
+        }
+
+        int espacio = Memoria->tam_pagina - offset;
+        int a_leer = bytes_restantes <= espacio ? bytes_restantes : espacio;
+
         memcpy(buffer + pos_buf, (char*)Memoria->marcos[marco].data + offset, a_leer);
 
-        Memoria->marcos[marco].uso = true;
-        Memoria->marcos[marco].ult_usado = Memoria->time_count++;
+        //Memoria->marcos[marco].uso = true;
+        //Memoria->marcos[marco].ult_usado = Memoria->time_count++;
 
         bytes_restantes -= a_leer;
         cursor_logico += a_leer;
         pos_buf += a_leer;
+
+        int direccion_fisica = marco * Memoria->tam_pagina + offset;
+        //char valor = ((char*)Memoria->marcos[marco].data)[offset];
+
+
+        char* ptr_dato = (char*)Memoria->marcos[marco].data + offset;
+       
+        log_info(logger, 
+            "Lectura Memoria: Query %d: Acción: LEER - Dirección Física: %d - Contenido leído: %.*s", 
+            obtener_query_id(), direccion_fisica, a_leer,ptr_dato );
+
+        //log_info(logger,
+        //"Lectura Memoria: Query %d: Acción: LEER - Dirección Física: %d - Valor: %c", obtener_query_id(), 
+        //direccion_fisica,valor);
     }
+    
 
     t_paquete* paquete = crear_paquete(OP_READ);
     agregar_a_paquete(paquete, archivo, strlen(archivo) + 1);
     agregar_a_paquete(paquete, tag, strlen(tag) + 1);
-    // agregar_a_paquete(paquete, &direccion_base, sizeof(int));
-    // agregar_a_paquete(paquete, &(query_id), sizeof(int));
-    agregar_a_paquete(paquete, buffer, strlen(buffer)+1);
+    agregar_a_paquete(paquete, buffer, tamanio);
 
     enviar_paquete(paquete, socket_master);
+    eliminar_paquete(paquete);
 
-    log_info(logger, "## Query %d: READ completado: '%s' (%s:%s)", obtener_query_id(), buffer, archivo, tag);
     free(buffer);
+    log_estado_marcos();
     return QI_OK;
 }
 
@@ -535,7 +578,6 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag) {
         return QI_ERR_PARSE;
 
     log_info(logger, "## Query %d: FLUSH iniciado para %s:%s", obtener_query_id(), archivo, tag);
-
     bool any_sent = false;
     for (int i = 0; i < Memoria->cant_marcos; i++) {
         t_pagina* f = &Memoria->marcos[i];
@@ -548,7 +590,7 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag) {
             any_sent = true;
         }
     }
-
+    log_estado_marcos();
     if (any_sent) {
         log_info(logger, "## Query %d: FLUSH completado exitosamente (%s:%s)", obtener_query_id(), archivo, tag);
     } else {
@@ -558,6 +600,7 @@ qi_status_t ejecutar_FLUSH_memoria(char* archivo, char* tag) {
 }
 
 qi_status_t memoria_flush_global(qi_status_t status) { //cuando se desaloja limpia las paginas modificadas
+
     if(status == QI_ERR_FLUSH){
         return QI_ERR_FLUSH;
     }
@@ -572,9 +615,7 @@ qi_status_t memoria_flush_global(qi_status_t status) { //cuando se desaloja limp
 
     int id = obtener_query_id();
 
-    
     log_info(logger, "## Query %d: Ejecutando FLUSH GLOBAL", id);
-
     for (int i = 0; i < Memoria->cant_marcos; i++) {
         t_pagina* f = &Memoria->marcos[i];
 
@@ -588,3 +629,29 @@ qi_status_t memoria_flush_global(qi_status_t status) { //cuando se desaloja limp
     log_info(logger, "## Query %d: FLUSH GLOBAL completado", id);
     return QI_OK;
 }
+
+
+
+void log_estado_marcos() {
+    log_info(logger, "================= ESTADO DE MARCOS =================");
+    log_info(logger, "Marco | File         | Tag | Página | Modificada | Uso | QueryID");
+    log_info(logger, "---------------------------------------------------");
+
+    for (int i = 0; i < Memoria->cant_marcos; i++) {
+        t_pagina* m = &Memoria->marcos[i];
+
+        log_info(logger,
+            "%-5d | %-12s | %-3s | %-6d | %-10s | %-3d | %-7d",
+            i,
+            m->archivo ? m->archivo : "-",
+            m->tag ? m->tag : "-",
+            m->presente ? m->nro_pag_logica : -1,
+            m->modificado ? "SI" : "NO",
+            m->uso ? 1 : 0,
+            obtener_query_id()
+        );
+    }
+
+    log_info(logger, "===================================================");
+}
+
