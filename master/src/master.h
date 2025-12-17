@@ -53,4 +53,6 @@ static int posible_desalojo(query_t *q);
 static bool hay_workers_libres(void);
 static worker_t *buscar_worker_por_query_id(int id_query);
 
+void finalizar_worker_query(query_t * q);
+
 #endif

@@ -211,6 +211,17 @@ void *conexion_cliente_master(void *args){
 
             break;
 
+        case QUERY_CANCEL:
+            
+            setear_query_cancel_flag(true);
+
+            t_list * paquete2;
+            paquete2 = recibir_paquete(socket_master);
+
+            list_destroy_and_destroy_elements(paquete2, free);
+
+            break;
+
         default:
             log_error(logger, "Codigo de operacion inesperado en handler_worker %d", cod_op);
 

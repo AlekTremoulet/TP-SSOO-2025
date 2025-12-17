@@ -31,6 +31,9 @@ char * Algorit_Remplazo;
 pthread_mutex_t * mutex_flag_desalojo;
 int flag_desalojo;
 
+pthread_mutex_t * mutex_flag_query_cancel;
+int flag_query_cancel;
+
 void inicializarWorker();
 void levantarConfig(char* archivo_config);
 void levantarStorage();

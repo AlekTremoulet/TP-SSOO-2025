@@ -29,6 +29,7 @@ qi_status_t obtener_instruccion_y_args(void* parametros_worker,  char* linea);
 qi_status_t interpretar_Instruccion(t_instruccion instruccion, char** args);
 
 int obtener_desalojo_flag();
+int obtener_query_cancel_flag();
 void setear_desalojo_flag(int value);
 void loop_principal();
 
@@ -49,6 +50,8 @@ void loop_principal();
 
 int obtener_desalojo_flag();
 void setear_desalojo_flag(int value);
+
+void setear_query_cancel_flag(int value);
 
 int enviar_error_a_master(protocolo_socket codigo, char *error);
 

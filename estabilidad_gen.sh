@@ -3,13 +3,27 @@
 #./
 echo "Estabilidad General"
 
-for k in $(seq 1 4);
+cd ./query_control
+make
+
+for i in $(seq 1 25);
 do
-   for i in $(seq 1 25);
-    do
-    echo "./query_control/bin/query_control ./query_control/query.config ./queries/AGING_${k} 20" 
-    ./query_control/bin/query_control ./query_control/query.config ./queries/AGING_${k} 20 &
-    done
+./bin/query_control query.config AGING_1 20 &
 done
 
-echo "Finalizo" 
+for i in $(seq 1 25);
+do
+./bin/query_control query.config AGING_2 20 &
+done
+
+for i in $(seq 1 25);
+do
+./bin/query_control query.config AGING_3 20 &
+done
+
+for i in $(seq 1 25);
+do
+./bin/query_control query.config AGING_4 20 &
+done
+
+echo "Finalizo"

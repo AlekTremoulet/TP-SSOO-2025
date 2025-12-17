@@ -48,6 +48,9 @@ char * query_path;
 extern pthread_mutex_t * mutex_flag_desalojo;
 extern sem_t * sem_hay_query;
 
+extern pthread_mutex_t * mutex_flag_query_cancel;
+extern int flag_query_cancel;
+
 extern list_struct_t * lista_queries;
 
 
@@ -221,9 +224,23 @@ int obtener_desalojo_flag(){
     return return_value;
 }
 
+int obtener_query_cancel_flag(){
+    pthread_mutex_lock(mutex_flag_desalojo);
+    int return_value = flag_query_cancel;
+    pthread_mutex_unlock(mutex_flag_desalojo);
+
+    return return_value;
+}
+
 void setear_desalojo_flag(int value){
     pthread_mutex_lock(mutex_flag_desalojo);
     flag_desalojo = value;
+    pthread_mutex_unlock(mutex_flag_desalojo);
+}
+
+void setear_query_cancel_flag(int value){
+    pthread_mutex_lock(mutex_flag_desalojo);
+    flag_query_cancel = value;
     pthread_mutex_unlock(mutex_flag_desalojo);
 }
 
@@ -233,6 +250,7 @@ void loop_principal(){
     qi_status_t status;
 
     mutex_flag_desalojo = inicializarMutex();
+    mutex_flag_query_cancel = inicializarMutex();
 
     //hay que modificar ejecutar query para que corra de a una linea, dandonos la oporturnidad de chequear si hay desalojo desde master
     while(1){
@@ -253,7 +271,24 @@ void loop_principal(){
             }
             setear_desalojo_flag(false);
 
-        }else {
+        }else if (obtener_query_cancel_flag()){
+
+            log_info(logger, "## Query <%d>: Cancelada por pedido del Master", obtener_query_id());
+
+            if(status != QI_END){
+                memoria_flush_global(QI_OK);
+                sem_post(sem_flush_finalizado);
+                
+                t_paquete * paquete_cancel_send = crear_paquete(QUERY_CANCEL);
+                agregar_a_paquete(paquete_cancel_send, &program_counter, sizeof(int));
+
+                enviar_paquete(paquete_cancel_send, socket_master);
+                sem_wait(sem_hay_query);
+            }
+            setear_query_cancel_flag(false);
+
+        }
+        else {
             sem_wait(sem_hay_query);
             status = ejecutar_query(query_path);
             if (!status){

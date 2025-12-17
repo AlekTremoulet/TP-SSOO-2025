@@ -574,7 +574,34 @@ void *hilo_worker_query(void *arg) {
 
                 //en caso de no-lectura se corta el while
                 return NULL;
-            }   
+            }
+
+            case QUERY_CANCEL: {
+
+                t_list *paquete_cancel = recibir_paquete(w->socket_worker);
+                int pc = *(int *)list_remove(paquete_cancel, 0);
+            
+                log_info(logger, "## Se terminó la Query <%d> en el Worker <%d>", q->id_query, w->id);
+
+                // termino una query
+
+                desencolar_query_de_exec(q->id_query);
+
+                // el worker ya no ejecuta ninguna query
+                w->query_id = -1;
+
+                // reencolar worker como libre
+                encolar_worker(workers_libres, w, -1);
+                log_debug(logger, "Worker %d se encola en lista ready", w->id);
+
+                free(q->archivo);
+                free(q);
+                free(dwq);
+
+                //en caso de no-lectura se corta el while
+                return NULL;
+            }
+            
 
             default:
                 log_error(logger, "Worker <%d> devolvió un código inesperado <%d>", w->id, cod);
@@ -679,7 +706,7 @@ void planificador_prioridades() {
 
         int status = posible_desalojo(q);
         if(status == 0){ // Hay workers libres
-            log_debug(logger, "habia worker libre -> desencolando worker libre");
+            log_debug(logger, "habia worker libre -> enviando a worker libre");
             w = desencolar_worker(workers_libres, 0);
         }else if (status == 1){ // hubo desalojo
             log_debug(logger, "hubo desalojo -> desencolando worker libre");
@@ -798,4 +825,14 @@ static worker_t *buscar_worker_por_query_id(int id_query) {
     pthread_mutex_unlock(workers_busy->mutex);
 
     return w_encontrado;
+}
+void finalizar_worker_query(query_t * q){
+
+    worker_t *w_a_cancelar = buscar_worker_por_query_id(q->id_query);
+
+    t_paquete *paquete_desalojo = crear_paquete(QUERY_CANCEL);
+    agregar_a_paquete(paquete_desalojo, "QUERY_CANCEL", strlen("QUERY_CANCEL"+1));
+    enviar_paquete(paquete_desalojo, w_a_cancelar->socket_worker);
+    eliminar_paquete(paquete_desalojo);
+
 }
