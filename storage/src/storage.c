@@ -357,7 +357,7 @@ void inicializar_bitmap() {
     }
 
 
-    bitmap = bitarray_create_with_mode((char*)contenido_bitmap, tamanio_bitmap, LSB_FIRST);
+    bitmap = bitarray_create_with_mode((char*)contenido_bitmap, tamanio_bitmap, MSB_FIRST);
     if (!bitmap) {
         log_error(logger, "Error al inicializar el bitmap.");
         free(contenido_bitmap);
