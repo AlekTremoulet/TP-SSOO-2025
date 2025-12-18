@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["P_planificacion_2",2],
+      "args": ["P_storage",1],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
