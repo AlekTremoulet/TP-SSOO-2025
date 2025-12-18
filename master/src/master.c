@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     usleep(1000*1000); // aguanto 1 segundo antes de arrancar el aging y planificador, para evitar problemas en desalojo
 
     // AGING
-    if (!strcmp(algo_planificacion, "PRIORIDADES") && tiempo_aging_ms > 0) {
+    if (!strcmp(algo_planificacion, "PRIORIDADES") && tiempo_aging_ms >= 0) {
         pthread_t tid_aging;
         pthread_create(&tid_aging, NULL, hilo_aging, NULL);
         pthread_detach(tid_aging);

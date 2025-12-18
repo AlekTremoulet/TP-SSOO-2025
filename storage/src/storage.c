@@ -30,6 +30,7 @@ int main(int argc, char* argv[]) {
         crear_directorio(dir_physical_blocks);
         levantarConfigSuperblock();
         path_bitmap = cargar_ruta("bitmap.bin");
+        inicializar_bitmap();
         inicializar_hash();
     }
 
