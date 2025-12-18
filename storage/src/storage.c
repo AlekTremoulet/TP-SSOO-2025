@@ -141,10 +141,13 @@ void *thread_worker(void * args){
             num_bloque_Log = *(int *)list_remove(paquete_recv, 0);
             query_id = *(int*) list_remove(paquete_recv, 0);
             void * lectura = Leer_bloque(archivo,tag,num_bloque_Log,query_id, error_devolucion);
-            paquete_send = crear_paquete(OP_READ);
-            agregar_a_paquete(paquete_send, lectura, tam_bloque);
-            enviar_paquete(paquete_send, socket_worker);
-            eliminar_paquete(paquete_send);
+            if (lectura != NULL){
+                paquete_send = crear_paquete(OP_READ);
+                agregar_a_paquete(paquete_send, lectura, tam_bloque);
+                enviar_paquete(paquete_send, socket_worker);
+                eliminar_paquete(paquete_send);
+            }
+            
             break;
         case OP_TAG:
             paquete_recv = recibir_paquete(socket_worker);

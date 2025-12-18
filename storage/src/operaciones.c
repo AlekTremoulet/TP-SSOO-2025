@@ -531,6 +531,7 @@ char* Leer_bloque(char* archivo, char* tag, int num_bloque_Log, int query_id, pr
     } else {
         log_error(logger, "Error: No se pudo abrir el archivo físico %s", path_bloque_fisico);
         *error = ERR_ESCRITURA_BLOQUE;
+        return NULL;
     }
 
     string_iterate_lines(bloques_actuales, (void*) free);
