@@ -47,14 +47,6 @@ int main(int argc, char* argv[]) {
 
     usleep(1000*1000); // aguanto 1 segundo antes de arrancar el aging y planificador, para evitar problemas en desalojo
 
-    // AGING
-    if (!strcmp(algo_planificacion, "PRIORIDADES") && tiempo_aging_ms >= 0) {
-        pthread_t tid_aging;
-        pthread_create(&tid_aging, NULL, hilo_aging, NULL);
-        pthread_detach(tid_aging);
-        log_info(logger, "## Se inicia hilo de aging cada <%d> ms", tiempo_aging_ms);
-    }
-
     // FIFO
     pthread_create(&tid_planificador, NULL, planificador, NULL);
     pthread_detach(tid_planificador); // pthread_detach =  el hilo se auto-limpia cuando termina
@@ -696,6 +688,11 @@ static query_t *sacar_mejor_query_ready(void) {
 } */
 
 void planificador_prioridades() {
+    pthread_t tid_aging;
+    pthread_create(&tid_aging, NULL, hilo_aging, NULL);
+    pthread_detach(tid_aging);
+    log_info(logger, "## Se inicia hilo de aging cada <%d> ms", tiempo_aging_ms);
+    
     while (1) {
         // espero hasta tener un W libre y una Q en READY
         log_debug(logger, "VUELTA PLANIFICADOR");
