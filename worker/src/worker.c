@@ -28,10 +28,10 @@ int main(int argc, char* argv[]) {
 
     sprintf(loggerFile, "%s.log", archivo_config);
     
-    logger = log_create(loggerFile, "WORKER", 1, current_log_level);
-
     levantarStorage();
     levantarConfig(archivo_config);
+
+    logger = log_create(loggerFile, "WORKER", 1, current_log_level);
     inicializarWorker();
     return 0;
 }

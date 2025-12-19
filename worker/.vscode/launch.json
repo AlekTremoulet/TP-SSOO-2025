@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["P_storage",1],
+      "args": ["P_memoria_worker",2],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

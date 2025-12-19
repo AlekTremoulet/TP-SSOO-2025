@@ -6,7 +6,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/bin/${workspaceFolderBasename}",
-      "args": ["query.config","STORAGE_5",0],
+      "args": ["query.config","MEMORIA_WORKER_2",0],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
